@@ -13,9 +13,13 @@ LIBS=-L/usr/local/Cellar/glew/2.1.0_1/lib -lglfw \
 
 SRC_DIR=/Users/YJ-work/cpp/myGL_glfw/fftWater/src
 
-all: main
+all: main fft
 
 main: main.o common.o
+	$(CXX) $(LIBS) $^ -o $@
+	rm -f *.o
+
+fft: fft.o
 	$(CXX) $(LIBS) $^ -o $@
 	rm -f *.o
 
@@ -23,6 +27,9 @@ main.o: $(SRC_DIR)/main.cpp
 	$(CXX) -c $(INCS) $^ -o $@
 
 common.o: $(SRC_DIR)/common.cpp
+	$(CXX) -c $(INCS) $^ -o $@
+
+fft.o: $(SRC_DIR)/fft.cpp
 	$(CXX) -c $(INCS) $^ -o $@
 
 .PHONY: clean
