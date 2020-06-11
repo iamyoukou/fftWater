@@ -69,6 +69,7 @@ int main() {
 
   Complex test[4][4] = {{0, 1, 2, 3}, {0, 1, 2, 3}, {0, 1, 2, 3}, {0, 1, 2, 3}};
 
+  /* FFT 2D */
   // fft for each row
   for (size_t i = 0; i < 4; i++) {
     Complex temp[] = {test[i][0], test[i][1], test[i][2], test[i][3]};
@@ -97,11 +98,50 @@ int main() {
     test[3][i] = data[3];
   }
 
+  std::cout << "after 2D fft:" << '\n';
   for (size_t i = 0; i < 4; i++) {
     std::cout << test[i][0] << ", ";
     std::cout << test[i][1] << ", ";
     std::cout << test[i][2] << ", ";
     std::cout << test[i][3] << '\n';
+  }
+  std::cout << '\n';
+
+  /* IFFT 2D */
+  // ifft for each row
+  for (size_t i = 0; i < 4; i++) {
+    Complex temp[] = {test[i][0], test[i][1], test[i][2], test[i][3]};
+
+    CArray data(temp, 4);
+
+    ifft(data);
+
+    test[i][0] = data[0];
+    test[i][1] = data[1];
+    test[i][2] = data[2];
+    test[i][3] = data[3];
+  }
+
+  // ifft for each column
+  for (size_t i = 0; i < 4; i++) {
+    Complex temp[] = {test[0][i], test[1][i], test[2][i], test[3][i]};
+
+    CArray data(temp, 4);
+
+    ifft(data);
+
+    test[0][i] = data[0];
+    test[1][i] = data[1];
+    test[2][i] = data[2];
+    test[3][i] = data[3];
+  }
+
+  std::cout << "after 2D ifft: " << '\n';
+  for (size_t i = 0; i < 4; i++) {
+    std::cout << test[i][0].real() << ", ";
+    std::cout << test[i][1].real() << ", ";
+    std::cout << test[i][2].real() << ", ";
+    std::cout << test[i][3].real() << '\n';
   }
 
   return 0;
