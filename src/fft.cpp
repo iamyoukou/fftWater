@@ -1,14 +1,4 @@
-#include <complex>
-#include <iostream>
-#include <valarray>
-
-using namespace std;
-
-const double PI = 3.141592653589793238460;
-
-typedef std::complex<double> Complex;
-typedef std::valarray<Complex> CArray;
-typedef valarray<valarray<Complex>> CArray2D;
+#include "fft.h"
 
 // Cooley–Tukey FFT (in-place, divide-and-conquer)
 // Higher memory requirements and redundancy although more intuitive
@@ -126,50 +116,28 @@ void ifft2(CArray2D &x) {
   } // end ifft for each column
 }
 
-int main() {
-  // const Complex test[] = {1, 0, 1, 0, 1, 1, 1, 1};
-  // CArray data(test, 8);
-  //
-  // // forward fft
-  // fft(data);
-  //
-  // std::cout << "fft" << std::endl;
-  // for (int i = 0; i < data.size(); ++i) {
-  //   std::cout << data[i] << std::endl;
-  // }
-  //
-  // // inverse fft
-  // ifft(data);
-  //
-  // std::cout << std::endl << "ifft" << std::endl;
-  // for (int i = 0; i < data.size(); ++i) {
-  //   std::cout << data[i] << std::endl;
-  // }
-
-  CArray2D test = {{0, 1, 2, 3}, {0, 1, 2, 3}, {0, 1, 2, 3}, {0, 1, 2, 3}};
-
-  /* FFT 2D */
-  fft2(test);
-
-  std::cout << "after 2D fft:" << '\n';
-  for (size_t i = 0; i < 4; i++) {
-    std::cout << test[i][0] << ", ";
-    std::cout << test[i][1] << ", ";
-    std::cout << test[i][2] << ", ";
-    std::cout << test[i][3] << '\n';
-  }
-  std::cout << '\n';
-
-  /* IFFT 2D */
-  ifft2(test);
-
-  std::cout << "after 2D ifft: " << '\n';
-  for (size_t i = 0; i < 4; i++) {
-    std::cout << test[i][0].real() << ", ";
-    std::cout << test[i][1].real() << ", ";
-    std::cout << test[i][2].real() << ", ";
-    std::cout << test[i][3].real() << '\n';
-  }
-
-  return 0;
-}
+/* Test code */
+// CArray2D test = {{0, 1, 2, 3}, {0, 1, 2, 3}, {0, 1, 2, 3}, {0, 1, 2, 3}};
+//
+// /* FFT 2D */
+// fft2(test);
+//
+// std::cout << "after 2D fft:" << '\n';
+// for (size_t i = 0; i < 4; i++) {
+//   std::cout << test[i][0] << ", ";
+//   std::cout << test[i][1] << ", ";
+//   std::cout << test[i][2] << ", ";
+//   std::cout << test[i][3] << '\n';
+// }
+// std::cout << '\n';
+//
+// /* IFFT 2D */
+// ifft2(test);
+//
+// std::cout << "after 2D ifft: " << '\n';
+// for (size_t i = 0; i < 4; i++) {
+//   std::cout << test[i][0].real() << ", ";
+//   std::cout << test[i][1].real() << ", ";
+//   std::cout << test[i][2].real() << ", ";
+//   std::cout << test[i][3].real() << '\n';
+// }
