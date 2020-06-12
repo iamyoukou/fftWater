@@ -2,10 +2,13 @@
 #include <iostream>
 #include <valarray>
 
+using namespace std;
+
 const double PI = 3.141592653589793238460;
 
 typedef std::complex<double> Complex;
 typedef std::valarray<Complex> CArray;
+typedef valarray<valarray<Complex>> CArray2D;
 
 // Cooley–Tukey FFT (in-place, divide-and-conquer)
 // Higher memory requirements and redundancy although more intuitive
@@ -45,7 +48,83 @@ void ifft(CArray &x) {
   x /= x.size();
 }
 
-void fft2(CArray &x) {}
+void fft2(CArray2D &x) {
+  int nOfRows = x.size();
+  int nOfCols = x[0].size();
+
+  // fft for each row
+  for (size_t i = 0; i < nOfRows; i++) {
+    CArray data(nOfRows);
+
+    // implant data
+    for (size_t j = 0; j < data.size(); j++) {
+      data[j] = x[i][j];
+    }
+
+    fft(data);
+
+    // update data
+    for (size_t j = 0; j < data.size(); j++) {
+      x[i][j] = data[j];
+    }
+  } // end fft for each row
+
+  // fft for each column
+  for (size_t i = 0; i < nOfCols; i++) {
+    CArray data(nOfCols);
+
+    // implant data
+    for (size_t j = 0; j < data.size(); j++) {
+      data[j] = x[j][i];
+    }
+
+    fft(data);
+
+    // update data
+    for (size_t j = 0; j < data.size(); j++) {
+      x[j][i] = data[j];
+    }
+  } // end fft for each column
+}
+
+void ifft2(CArray2D &x) {
+  int nOfRows = x.size();
+  int nOfCols = x[0].size();
+
+  // ifft for each row
+  for (size_t i = 0; i < nOfRows; i++) {
+    CArray data(nOfRows);
+
+    // implant data
+    for (size_t j = 0; j < data.size(); j++) {
+      data[j] = x[i][j];
+    }
+
+    ifft(data);
+
+    // update data
+    for (size_t j = 0; j < data.size(); j++) {
+      x[i][j] = data[j];
+    }
+  } // end ifft for each row
+
+  // ifft for each column
+  for (size_t i = 0; i < nOfCols; i++) {
+    CArray data(nOfCols);
+
+    // implant data
+    for (size_t j = 0; j < data.size(); j++) {
+      data[j] = x[j][i];
+    }
+
+    ifft(data);
+
+    // update data
+    for (size_t j = 0; j < data.size(); j++) {
+      x[j][i] = data[j];
+    }
+  } // end ifft for each column
+}
 
 int main() {
   // const Complex test[] = {1, 0, 1, 0, 1, 1, 1, 1};
@@ -67,36 +146,10 @@ int main() {
   //   std::cout << data[i] << std::endl;
   // }
 
-  Complex test[4][4] = {{0, 1, 2, 3}, {0, 1, 2, 3}, {0, 1, 2, 3}, {0, 1, 2, 3}};
+  CArray2D test = {{0, 1, 2, 3}, {0, 1, 2, 3}, {0, 1, 2, 3}, {0, 1, 2, 3}};
 
   /* FFT 2D */
-  // fft for each row
-  for (size_t i = 0; i < 4; i++) {
-    Complex temp[] = {test[i][0], test[i][1], test[i][2], test[i][3]};
-
-    CArray data(temp, 4);
-
-    fft(data);
-
-    test[i][0] = data[0];
-    test[i][1] = data[1];
-    test[i][2] = data[2];
-    test[i][3] = data[3];
-  }
-
-  // fft for each column
-  for (size_t i = 0; i < 4; i++) {
-    Complex temp[] = {test[0][i], test[1][i], test[2][i], test[3][i]};
-
-    CArray data(temp, 4);
-
-    fft(data);
-
-    test[0][i] = data[0];
-    test[1][i] = data[1];
-    test[2][i] = data[2];
-    test[3][i] = data[3];
-  }
+  fft2(test);
 
   std::cout << "after 2D fft:" << '\n';
   for (size_t i = 0; i < 4; i++) {
@@ -108,33 +161,7 @@ int main() {
   std::cout << '\n';
 
   /* IFFT 2D */
-  // ifft for each row
-  for (size_t i = 0; i < 4; i++) {
-    Complex temp[] = {test[i][0], test[i][1], test[i][2], test[i][3]};
-
-    CArray data(temp, 4);
-
-    ifft(data);
-
-    test[i][0] = data[0];
-    test[i][1] = data[1];
-    test[i][2] = data[2];
-    test[i][3] = data[3];
-  }
-
-  // ifft for each column
-  for (size_t i = 0; i < 4; i++) {
-    Complex temp[] = {test[0][i], test[1][i], test[2][i], test[3][i]};
-
-    CArray data(temp, 4);
-
-    ifft(data);
-
-    test[0][i] = data[0];
-    test[1][i] = data[1];
-    test[2][i] = data[2];
-    test[3][i] = data[3];
-  }
+  ifft2(test);
 
   std::cout << "after 2D ifft: " << '\n';
   for (size_t i = 0; i < 4; i++) {
