@@ -4,6 +4,8 @@
 #include <cstdlib>
 #include <ctime>
 
+typedef vector<vector<vec3>> Array2D3f;
+
 GLFWwindow *window;
 
 float verticalAngle = -1.775f;
@@ -19,15 +21,13 @@ vec3 eyeDirection =
          sin(verticalAngle) * sin(horizontalAngle));
 vec3 up = vec3(0.f, 1.f, 0.f);
 
-vec3 lightPosition = vec3(3.f, 3.f, 3.f);
+vec3 lightPos = vec3(3.f, 3.f, 3.f);
 vec3 lightColor = vec3(1.f, 1.f, 1.f);
 float lightPower = 12.f;
 
 vec3 materialDiffuse = vec3(0.f, 1.f, 0.f);
 vec3 materialAmbient = vec3(0.f, 0.05f, 0.f);
 vec3 materialSpecular = vec3(1.f, 1.f, 1.f);
-
-Mesh mesh;
 
 const float SIZE = 500.f;
 GLfloat vtxsSkybox[] = {
@@ -61,15 +61,31 @@ GLfloat vtxsSkybox[] = {
     //
     SIZE, -SIZE, -SIZE, SIZE, SIZE, -SIZE, -SIZE, SIZE, -SIZE};
 
-GLuint vboSkybox, tboSkybox, vaoSkybox;
-GLint uniSkyboxM, uniSkyboxV, uniSkyboxP;
-GLint uniMeshM, uniMeshV, uniMeshP;
+/* Water */
+int N = 4;
+float cellSize = 0.1f;
+float Lx = cellSize * float(N - 1);
+float Lz = Lx;
+
+Array2D3f waterPos;
+Array2D3f waterN;
+
+GLuint vboWaterPos, vboWaterN, vaoWater;
+GLint uniWaterM, uniWaterV, uniWaterP;
 GLint uniLightColor, uniLightPos, uniLightPower;
 GLint uniDiffuse, uniAmbient, uniSpecular;
+GLint vsWater, fsWater;
+mat4 waterM, waterV, waterP;
+GLuint shaderWater;
+
+Mesh mesh;
+
+/* Other */
+GLuint vboSkybox, tboSkybox, vaoSkybox;
+GLint uniSkyboxM, uniSkyboxV, uniSkyboxP;
 mat4 oriSkyboxM, skyboxM, skyboxV, skyboxP;
-mat4 meshM, meshV, meshP;
-GLuint vsSkybox, fsSkybox, vsModel, fsModel;
-GLuint shaderSkybox, shaderMesh;
+GLuint vsSkybox, fsSkybox;
+GLuint shaderSkybox;
 
 void computeMatricesFromInputs();
 void keyCallback(GLFWwindow *, int, int, int, int);
@@ -82,6 +98,9 @@ void initMatrix();
 void initSkybox();
 void initMesh();
 void initUniform();
+void initWater();
+
+void updateWater();
 
 int main(int argc, char **argv) {
   initGL();
@@ -91,7 +110,15 @@ int main(int argc, char **argv) {
   initUniform();
 
   initSkybox();
-  initMesh();
+  // initMesh();
+  initWater();
+
+  // for (size_t i = 0; i < waterPos.size(); i++) {
+  //   for (size_t j = 0; j < waterPos[0].size(); j++) {
+  //     std::cout << to_string(waterPos[i][j]) << ", ";
+  //   }
+  //   std::cout << '\n';
+  // }
 
   // a rough way to solve cursor position initialization problem
   // must call glfwPollEvents once to activate glfwSetCursorPos
@@ -105,6 +132,9 @@ int main(int argc, char **argv) {
     glClearColor(97 / 256.f, 175 / 256.f, 239 / 256.f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    // update water
+    // updateWater();
+
     // view control
     computeMatricesFromInputs();
 
@@ -114,9 +144,13 @@ int main(int argc, char **argv) {
     glDrawArrays(GL_TRIANGLES, 0, 36);
 
     // draw 3d models
-    glUseProgram(shaderMesh);
+    glUseProgram(shaderWater);
     glBindVertexArray(mesh.vao);
     glDrawArrays(GL_TRIANGLES, 0, mesh.faces.size() * 3);
+
+    // glUseProgram(shaderWater);
+    // glBindVertexArray(vaoWater);
+    // glDrawArrays(GL_POINTS, 0, N * N);
 
     // update frame
     glfwSwapBuffers(window);
@@ -204,11 +238,11 @@ void computeMatricesFromInputs() {
   glUniformMatrix4fv(uniSkyboxM, 1, GL_FALSE, value_ptr(skyboxM));
 
   // update for mesh
-  glUseProgram(shaderMesh);
-  meshV = newV;
-  meshP = newP;
-  glUniformMatrix4fv(uniMeshV, 1, GL_FALSE, value_ptr(meshV));
-  glUniformMatrix4fv(uniMeshP, 1, GL_FALSE, value_ptr(meshP));
+  glUseProgram(shaderWater);
+  waterV = newV;
+  waterP = newP;
+  glUniformMatrix4fv(uniWaterV, 1, GL_FALSE, value_ptr(waterV));
+  glUniformMatrix4fv(uniWaterP, 1, GL_FALSE, value_ptr(waterP));
 
   // For the next frame, the "last time" will be "now"
   lastTime = currentTime;
@@ -298,7 +332,7 @@ void initShader() {
   shaderSkybox =
       buildShader("./shader/vsSkybox.glsl", "./shader/fsSkybox.glsl");
 
-  shaderMesh = buildShader("./shader/vsModel.glsl", "./shader/fsModel.glsl");
+  shaderWater = buildShader("./shader/vsWater.glsl", "./shader/fsWater.glsl");
 }
 
 void initMatrix() {
@@ -311,11 +345,11 @@ void initMatrix() {
                   farPlane);
 
   // mesh
-  glUseProgram(shaderMesh);
+  glUseProgram(shaderWater);
 
-  meshM = M;
-  meshV = V;
-  meshP = P;
+  waterM = M;
+  waterV = V;
+  waterP = P;
 
   // skybox
   glUseProgram(shaderSkybox);
@@ -377,52 +411,87 @@ void initSkybox() {
   glEnableVertexAttribArray(0);
 }
 
-void initMesh() {
-  mesh = loadObj("./mesh/cube.obj");
-  createMesh(mesh);
-}
-
 void initUniform() {
-  /* Mesh */
-  glUseProgram(shaderMesh);
+  /* Water */
+  glUseProgram(shaderWater);
 
-  uniMeshM = myGetUniformLocation(shaderMesh, "model");
-  uniMeshV = myGetUniformLocation(shaderMesh, "view");
-  uniMeshP = myGetUniformLocation(shaderMesh, "projection");
+  uniWaterM = myGetUniformLocation(shaderWater, "M");
+  uniWaterV = myGetUniformLocation(shaderWater, "V");
+  uniWaterP = myGetUniformLocation(shaderWater, "P");
 
-  glUniformMatrix4fv(uniMeshM, 1, GL_FALSE, value_ptr(meshM));
-  glUniformMatrix4fv(uniMeshV, 1, GL_FALSE, value_ptr(meshV));
-  glUniformMatrix4fv(uniMeshP, 1, GL_FALSE, value_ptr(meshP));
+  glUniformMatrix4fv(uniWaterM, 1, GL_FALSE, value_ptr(waterM));
+  glUniformMatrix4fv(uniWaterV, 1, GL_FALSE, value_ptr(waterV));
+  glUniformMatrix4fv(uniWaterP, 1, GL_FALSE, value_ptr(waterP));
 
   // light
-  uniLightColor = myGetUniformLocation(shaderMesh, "lightColor");
-  glUniform3fv(uniLightColor, 1, value_ptr(lightColor));
+  // uniLightColor = myGetUniformLocation(shaderWater, "lightColor");
+  // glUniform3fv(uniLightColor, 1, value_ptr(lightColor));
 
-  uniLightPos = myGetUniformLocation(shaderMesh, "lightPosition");
-  glUniform3fv(uniLightPos, 1, value_ptr(lightPosition));
+  uniLightPos = myGetUniformLocation(shaderWater, "lightPos");
+  glUniform3fv(uniLightPos, 1, value_ptr(lightPos));
 
-  uniLightPower = myGetUniformLocation(shaderMesh, "lightPower");
-  glUniform1f(uniLightPower, lightPower);
+  // uniLightPower = myGetUniformLocation(shaderWater, "lightPower");
+  // glUniform1f(uniLightPower, lightPower);
 
-  uniDiffuse = myGetUniformLocation(shaderMesh, "diffuseColor");
-  glUniform3fv(uniDiffuse, 1, value_ptr(materialDiffuse));
-
-  uniAmbient = myGetUniformLocation(shaderMesh, "ambientColor");
-  glUniform3fv(uniAmbient, 1, value_ptr(materialAmbient));
-
-  uniSpecular = myGetUniformLocation(shaderMesh, "specularColor");
-  glUniform3fv(uniSpecular, 1, value_ptr(materialSpecular));
+  // uniDiffuse = myGetUniformLocation(shaderWater, "diffuseColor");
+  // glUniform3fv(uniDiffuse, 1, value_ptr(materialDiffuse));
+  //
+  // uniAmbient = myGetUniformLocation(shaderWater, "ambientColor");
+  // glUniform3fv(uniAmbient, 1, value_ptr(materialAmbient));
+  //
+  // uniSpecular = myGetUniformLocation(shaderWater, "specularColor");
+  // glUniform3fv(uniSpecular, 1, value_ptr(materialSpecular));
 
   /* Skybox */
   glUseProgram(shaderSkybox);
 
-  uniSkyboxM = myGetUniformLocation(shaderSkybox, "model");
-  uniSkyboxV = myGetUniformLocation(shaderSkybox, "view");
-  uniSkyboxP = myGetUniformLocation(shaderSkybox, "projection");
+  uniSkyboxM = myGetUniformLocation(shaderSkybox, "M");
+  uniSkyboxV = myGetUniformLocation(shaderSkybox, "V");
+  uniSkyboxP = myGetUniformLocation(shaderSkybox, "P");
 
   glUniformMatrix4fv(uniSkyboxM, 1, GL_FALSE, value_ptr(skyboxM));
   glUniformMatrix4fv(uniSkyboxV, 1, GL_FALSE, value_ptr(skyboxV));
   glUniformMatrix4fv(uniSkyboxP, 1, GL_FALSE, value_ptr(skyboxP));
+}
+
+void initWater() {
+  /* position, normal */
+  // for (size_t row = 0; row < N; row++) {
+  //   vector<vec3> rowPos, rowN;
+  //
+  //   for (size_t col = 0; col < N; col++) {
+  //     vec3 pos(col * cellSize, 0.f, row * cellSize);
+  //     vec3 n(0.f, 1.f, 0.f);
+  //
+  //     rowPos.push_back(pos);
+  //     rowN.push_back(n);
+  //   }
+  //
+  //   waterPos.push_back(rowPos);
+  //   waterN.push_back(rowN);
+  // }
+  //
+  // /* vertex buffer objects */
+  // glGenVertexArrays(1, &vaoWater);
+  // glBindVertexArray(vaoWater);
+  //
+  // // position
+  // glGenBuffers(1, &vboWaterPos);
+  // glBindBuffer(GL_ARRAY_BUFFER, vboWaterPos);
+  // glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * N * N * 3, NULL,
+  //              GL_STATIC_DRAW);
+  // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+  // glEnableVertexAttribArray(0);
+  //
+  // // normal
+  // glGenBuffers(1, &vboWaterN);
+  // glBindBuffer(GL_ARRAY_BUFFER, vboWaterN);
+  // glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * N * N * 3, NULL,
+  //              GL_STATIC_DRAW);
+  // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+  // glEnableVertexAttribArray(2);
+  mesh = loadObj("./mesh/cube.obj");
+  createMesh(mesh);
 }
 
 float randf() {
@@ -430,4 +499,22 @@ float randf() {
   float f = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
 
   return f;
+}
+
+void updateWater() {
+  glBindVertexArray(vaoWater);
+
+  // position
+  glBindBuffer(GL_ARRAY_BUFFER, vboWaterPos);
+  // buffer orphaning
+  glBufferData(GL_ARRAY_BUFFER, N * N * 3 * sizeof(GLfloat), NULL,
+               GL_STREAM_DRAW);
+  for (size_t row = 0; row < N; row++) {
+    for (size_t col = 0; col < N; col++) {
+      vec3 pos = waterPos[row][col];
+
+      glBufferSubData(GL_ARRAY_BUFFER, sizeof(GLfloat) * row * col,
+                      sizeof(GLfloat) * 3, &pos);
+    }
+  }
 }
