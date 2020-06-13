@@ -34,6 +34,57 @@ Although Scrawk's implementation already has a nice result, some problems exist.
 
 I will try to fix those problems and produce a better result.
 
+# Update the geometry of the water
+
+There are `three` things to calculate each frame.
+
+1. Height (`Eq. 19`). (1 dimension, `1` IFFT)
+
+2. Normal (`Eq. 20`). (2 dimension, `2` IFFT)
+
+3. Horizontal displacement (`Eq. 29`). (2 dimension, `2` IFFT)
+
+Normally, `5` IFFT are needed per frame,
+as each equation has its own frequency term.
+
+However, their exponent terms are same.
+So it is better to calculate those exponents once per frame,
+and write them into a lookup table.
+Then, access that table when doing the calculations above,
+just like what Scrawk has done.
+
+# IFFT
+
+To be more obvious, `Eq. 19` can be rewritten as following.
+
+![eq19](./image/eq19.png)
+
+Note that:
+
+- The grid size `(Lx, Lz)` is used in the exponent term,
+instead of the number of sampling points `(N, M)`.
+
+- Some IFFT routine has a `1/NM` coefficient on the right side.
+
+- `Eq. 26` provides the frequency term.
+
+`Eq. 19, 20` can also be rewritten in a similar way.
+The additional complex term `ik` has the following property:
+
+![ia](./image/ia.png)
+
+Using this property, `ik` can be multiplied with the frequency term.
+
+## 2D IFFT
+
+According to [this article](https://www.ft.unicamp.br/docentes/magic/khoros/html-dip/c5/s2/front-page.html), a 2D IFFT can be calculated with a two-step 1D IFFT.
+
+Assume we have a 2D frequency term `F(u, v)`, then
+
+- Perform IFFT on each row of `F(u, v)` to get `f(u, y)`.
+
+- Perform IFFT on each column of `f(u, y)` to get `f(x, y)`.
+
 # Reference
 [Tessendorf, 2001] Tessendorf, Jerry. "Simulating ocean water." Simulating nature: realistic and interactive techniques. SIGGRAPH 1.2 (2001): 5.
 
