@@ -1,21 +1,18 @@
 #include "common.h"
 #include "fft.h"
 
-#include <cstdlib>
-#include <ctime>
-
 typedef vector<vector<vec3>> Array2D3f;
 
 GLFWwindow *window;
 
-float verticalAngle = -1.775f;
-float horizontalAngle = 0.935f;
+float verticalAngle = -2.15391;
+float horizontalAngle = 1.5649;
 float initialFoV = 45.0f;
 float speed = 5.0f;
 float mouseSpeed = 0.005f;
 float farPlane = 2000.f;
 
-vec3 eyePoint = vec3(2.f, 1.2f, -0.8f);
+vec3 eyePoint = vec3(0.115868, 12.963538, 17.811010);
 vec3 eyeDirection =
     vec3(sin(verticalAngle) * cos(horizontalAngle), cos(verticalAngle),
          sin(verticalAngle) * sin(horizontalAngle));
@@ -62,10 +59,9 @@ GLfloat vtxsSkybox[] = {
     SIZE, -SIZE, -SIZE, SIZE, SIZE, -SIZE, -SIZE, SIZE, -SIZE};
 
 /* Water */
-int N = 4;
-float cellSize = 0.1f;
-float Lx = cellSize * float(N - 1);
-float Lz = Lx;
+int N;
+float cellSize;
+float Lx, Lz;
 
 Array2D3f waterPos;
 Array2D3f waterN;
@@ -455,43 +451,15 @@ void initUniform() {
 }
 
 void initWater() {
-  /* position, normal */
-  // for (size_t row = 0; row < N; row++) {
-  //   vector<vec3> rowPos, rowN;
-  //
-  //   for (size_t col = 0; col < N; col++) {
-  //     vec3 pos(col * cellSize, 0.f, row * cellSize);
-  //     vec3 n(0.f, 1.f, 0.f);
-  //
-  //     rowPos.push_back(pos);
-  //     rowN.push_back(n);
-  //   }
-  //
-  //   waterPos.push_back(rowPos);
-  //   waterN.push_back(rowN);
-  // }
-  //
-  // /* vertex buffer objects */
-  // glGenVertexArrays(1, &vaoWater);
-  // glBindVertexArray(vaoWater);
-  //
-  // // position
-  // glGenBuffers(1, &vboWaterPos);
-  // glBindBuffer(GL_ARRAY_BUFFER, vboWaterPos);
-  // glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * N * N * 3, NULL,
-  //              GL_STATIC_DRAW);
-  // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-  // glEnableVertexAttribArray(0);
-  //
-  // // normal
-  // glGenBuffers(1, &vboWaterN);
-  // glBindBuffer(GL_ARRAY_BUFFER, vboWaterN);
-  // glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * N * N * 3, NULL,
-  //              GL_STATIC_DRAW);
-  // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-  // glEnableVertexAttribArray(2);
-  mesh = loadObj("./mesh/cube.obj");
+  mesh = loadObj("./mesh/water.obj");
   createMesh(mesh);
+
+  // initialize parameters
+  // change these parameters if water.obj changes
+  N = 8;
+  cellSize = 2.5f;
+  Lx = 20.f;
+  Lz = Lx;
 }
 
 float randf() {
