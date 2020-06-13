@@ -96,7 +96,7 @@ void initMesh();
 void initUniform();
 void initWater();
 
-void updateWater();
+void step();
 
 int main(int argc, char **argv) {
   initGL();
@@ -129,7 +129,7 @@ int main(int argc, char **argv) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // update water
-    // updateWater();
+    step();
 
     // view control
     computeMatricesFromInputs();
@@ -317,6 +317,8 @@ void initGL() {
 
   glEnable(GL_CULL_FACE);
   glEnable(GL_DEPTH_TEST);
+
+  // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 }
 
 void initOther() {
@@ -469,20 +471,40 @@ float randf() {
   return f;
 }
 
-void updateWater() {
-  glBindVertexArray(vaoWater);
+void step() {
+  /* update geometry */
+  for (size_t i = 0; i < mesh.vertices.size(); i++) {
+    vec3 &vtx = mesh.vertices[i];
+
+    vtx.y += randf() * 0.01f;
+  }
+
+  /* update buffer objects */
+  int nOfFaces = mesh.faces.size();
+
+  glBindVertexArray(mesh.vao);
 
   // position
-  glBindBuffer(GL_ARRAY_BUFFER, vboWaterPos);
+  glBindBuffer(GL_ARRAY_BUFFER, mesh.vboVtxs);
   // buffer orphaning
-  glBufferData(GL_ARRAY_BUFFER, N * N * 3 * sizeof(GLfloat), NULL,
+  glBufferData(GL_ARRAY_BUFFER, nOfFaces * 3 * 3 * sizeof(GLfloat), NULL,
                GL_STREAM_DRAW);
-  for (size_t row = 0; row < N; row++) {
-    for (size_t col = 0; col < N; col++) {
-      vec3 pos = waterPos[row][col];
 
-      glBufferSubData(GL_ARRAY_BUFFER, sizeof(GLfloat) * row * col,
-                      sizeof(GLfloat) * 3, &pos);
-    }
+  for (size_t i = 0; i < nOfFaces; i++) {
+
+    int vtxIdx = mesh.faces[i].v1;
+    vec3 vtx = mesh.vertices[vtxIdx];
+    glBufferSubData(GL_ARRAY_BUFFER, sizeof(GLfloat) * (i * 9 + 0),
+                    sizeof(GLfloat) * 3, &vtx);
+
+    vtxIdx = mesh.faces[i].v2;
+    vtx = mesh.vertices[vtxIdx];
+    glBufferSubData(GL_ARRAY_BUFFER, sizeof(GLfloat) * (i * 9 + 3),
+                    sizeof(GLfloat) * 3, &vtx);
+
+    vtxIdx = mesh.faces[i].v3;
+    vtx = mesh.vertices[vtxIdx];
+    glBufferSubData(GL_ARRAY_BUFFER, sizeof(GLfloat) * (i * 9 + 6),
+                    sizeof(GLfloat) * 3, &vtx);
   }
 }
