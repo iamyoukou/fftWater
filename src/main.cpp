@@ -12,7 +12,7 @@ float speed = 5.0f;
 float mouseSpeed = 0.005f;
 float farPlane = 2000.f;
 
-vec3 eyePoint = vec3(0.115868, 12.963538, 17.811010);
+vec3 eyePoint = vec3(8.964328, 9.591134, 7.734172);
 vec3 eyeDirection =
     vec3(sin(verticalAngle) * cos(horizontalAngle), cos(verticalAngle),
          sin(verticalAngle) * sin(horizontalAngle));
@@ -460,7 +460,7 @@ void initWater() {
   // change these parameters if water.obj changes
   N = 8;
   cellSize = 2.5f;
-  Lx = 20.f;
+  Lx = 17.5f;
   Lz = Lx;
 }
 

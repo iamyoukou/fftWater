@@ -38,20 +38,20 @@ I will try to fix those problems and produce a better result.
 
 There are `three` things to calculate each frame.
 
-1. Height (`Eq. 19`). (1 dimension, `1` IFFT)
+1. Height (`Eq. 19`). (`1` dimension, `1` IFFT)
 
-2. Normal (`Eq. 20`). (2 dimension, `2` IFFT)
+2. Normal (`Eq. 20`). (`2` dimension, `2` IFFT)
 
-3. Horizontal displacement (`Eq. 29`). (2 dimension, `2` IFFT)
+3. Horizontal displacement (`Eq. 29`). (`2` dimension, `2` IFFT)
 
-Normally, `5` IFFT are needed per frame,
-as each equation has its own frequency term.
+Normally, `5` IFFT are needed `per frame`,
+as each equation has different frequency term.
 
-However, their exponent terms are same.
-So it is better to calculate those exponents once per frame,
+However, their exponent terms are always the same.
+So it is better to calculate those exponents once before simulation,
 and write them into a lookup table.
-Then, access that table when doing the calculations above,
-just like what Scrawk has done.
+Then, access that table in each frame.
+Scrawk has shown this optimization in his code.
 
 # IFFT
 

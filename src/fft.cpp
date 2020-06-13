@@ -2,7 +2,7 @@
 
 // Cooley–Tukey FFT (in-place, divide-and-conquer)
 // Higher memory requirements and redundancy although more intuitive
-void fft(CArray &x) {
+void FFT::fft(CArray &x) {
   const size_t N = x.size();
   if (N <= 1)
     return;
@@ -17,14 +17,15 @@ void fft(CArray &x) {
 
   // combine
   for (size_t k = 0; k < N / 2; ++k) {
-    Complex t = std::polar(1.0, -2 * PI * k / N) * odd[k];
+    // Complex t = std::polar(1.0, -2 * PI * k / N) * odd[k];
+    Complex t = Wk[k] * odd[k];
     x[k] = even[k] + t;
     x[k + N / 2] = even[k] - t;
   }
 }
 
 // inverse fft (in-place)
-void ifft(CArray &x) {
+void FFT::ifft(CArray &x) {
   // conjugate the complex numbers
   x = x.apply(std::conj);
 
@@ -38,7 +39,7 @@ void ifft(CArray &x) {
   x /= x.size();
 }
 
-void fft2(CArray2D &x) {
+void FFT::fft2(CArray2D &x) {
   int nOfRows = x.size();
   int nOfCols = x[0].size();
 
@@ -77,7 +78,7 @@ void fft2(CArray2D &x) {
   } // end fft for each column
 }
 
-void ifft2(CArray2D &x) {
+void FFT::ifft2(CArray2D &x) {
   int nOfRows = x.size();
   int nOfCols = x[0].size();
 
@@ -114,6 +115,14 @@ void ifft2(CArray2D &x) {
       x[j][i] = data[j];
     }
   } // end ifft for each column
+}
+
+void FFT::calWk() {
+  Wk.resize(N);
+
+  for (size_t i = 0; i < Wk.size(); i++) {
+    Wk[i] = polar(1.0, -2 * PI * i / N);
+  }
 }
 
 /* Test code */
