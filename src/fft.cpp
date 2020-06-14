@@ -1,5 +1,10 @@
 #include "fft.h"
 
+FFT::FFT(int n) {
+  N = n;
+  computeWk();
+}
+
 // Cooley–Tukey FFT (in-place, divide-and-conquer)
 // Higher memory requirements and redundancy although more intuitive
 void FFT::fft(CArray &x) {
@@ -117,7 +122,7 @@ void FFT::ifft2(CArray2D &x) {
   } // end ifft for each column
 }
 
-void FFT::calWk() {
+void FFT::computeWk() {
   Wk.resize(N);
 
   for (size_t i = 0; i < Wk.size(); i++) {

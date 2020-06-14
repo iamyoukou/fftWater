@@ -13,16 +13,19 @@ typedef valarray<valarray<Complex>> CArray2D;
 
 class FFT {
 public:
-  int N;     // # of sample points
-  CArray Wk; // lookup table for exponent terms
+  // # of sample points along one axis
+  int N;
+
+  // a lookup table for exponent terms
+  CArray Wk;
 
   FFT();
-  FFT(int n) { N = n; }
+  FFT(int);
 
   void fft(CArray &);
   void ifft(CArray &);
   void fft2(CArray2D &);
   void ifft2(CArray2D &);
 
-  void calWk();
+  void computeWk();
 };

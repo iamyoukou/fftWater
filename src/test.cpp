@@ -5,7 +5,6 @@ using namespace std;
 
 int main(int argc, char const *argv[]) {
   FFT fft(4);
-  fft.calWk();
 
   CArray2D test = {{1, 2, 3, 4}, {1, 2, 3, 4}, {1, 2, 3, 4}, {1, 2, 3, 4}};
 
