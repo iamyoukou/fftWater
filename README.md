@@ -46,11 +46,14 @@ There are `three` things to calculate each frame.
 
 Normally, `5` IFFT are needed `per frame`,
 as each equation has different frequency term.
+However, given the number of sampling points `N` along each axis,
+their complex exponent terms are always the same, i.e.
 
-However, their exponent terms are always the same.
-So it is better to calculate those exponents once before simulation,
+![Wk](./image/Wk.png)
+
+So it is better to calculate these exponents once before simulation,
 and write them into a lookup table.
-Then, access that table in each frame.
+Then, access that table when performing IFFT in each frame.
 Scrawk has shown this optimization in his code.
 
 # IFFT
