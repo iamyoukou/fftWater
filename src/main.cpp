@@ -161,9 +161,9 @@ int main(int argc, char **argv) {
 
     // draw 3d models
     glUseProgram(shaderWater);
-    // glBindVertexArray(mesh.vao);
-    // glDrawArrays(GL_TRIANGLES, 0, mesh.faces.size() * 3);
-    drawPoints(vtxs);
+    glBindVertexArray(mesh.vao);
+    glDrawArrays(GL_TRIANGLES, 0, mesh.faces.size() * 3);
+    // drawPoints(vtxs);
 
     // glUseProgram(shaderWater);
     // glBindVertexArray(vaoWater);
@@ -341,9 +341,9 @@ void initGL() {
   glEnable(GL_CULL_FACE);
   glEnable(GL_DEPTH_TEST);
 
-  // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-  glEnable(GL_PROGRAM_POINT_SIZE);
-  glPointSize(15);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  // glEnable(GL_PROGRAM_POINT_SIZE);
+  // glPointSize(15);
 }
 
 void initOther() {
@@ -355,9 +355,9 @@ void initShader() {
   shaderSkybox =
       buildShader("./shader/vsSkybox.glsl", "./shader/fsSkybox.glsl");
 
-  // shaderWater = buildShader("./shader/vsWater.glsl",
-  // "./shader/fsWater.glsl");
-  shaderWater = buildShader("./shader/vsPoint.glsl", "./shader/fsPoint.glsl");
+  shaderWater = buildShader("./shader/vsWater.glsl", "./shader/fsWater.glsl");
+  // shaderWater = buildShader("./shader/vsPoint.glsl",
+  // "./shader/fsPoint.glsl");
 }
 
 void initMatrix() {
@@ -452,8 +452,8 @@ void initUniform() {
   // uniLightColor = myGetUniformLocation(shaderWater, "lightColor");
   // glUniform3fv(uniLightColor, 1, value_ptr(lightColor));
 
-  // uniLightPos = myGetUniformLocation(shaderWater, "lightPos");
-  // glUniform3fv(uniLightPos, 1, value_ptr(lightPos));
+  uniLightPos = myGetUniformLocation(shaderWater, "lightPos");
+  glUniform3fv(uniLightPos, 1, value_ptr(lightPos));
 
   // uniLightPower = myGetUniformLocation(shaderWater, "lightPower");
   // glUniform1f(uniLightPower, lightPower);
@@ -480,28 +480,28 @@ void initUniform() {
 }
 
 void initWater() {
-  // mesh = loadObj("./mesh/water.obj");
-  // createMesh(mesh);
+  mesh = loadObj("./mesh/water.obj");
+  createMesh(mesh);
 
   // initialize parameters
   // change these parameters if water.obj changes
-  N = 16;
+  N = 8;
   M = N;
   cellSize = 1.f;
   Lx = cellSize * (N - 1);
   Lz = Lx;
 
   // test
-  for (size_t i = 0; i < N; i++) {
-    for (size_t j = 0; j < M; j++) {
-      Point p;
-      p.pos = vec3(i * cellSize, 0.f, j * cellSize);
-      p.color = vec3(1.f, 1.f, 1.f);
-
-      vtxs.push_back(p);
-      oriVtxs.push_back(p);
-    }
-  }
+  // for (size_t i = 0; i < N; i++) {
+  //   for (size_t j = 0; j < M; j++) {
+  //     Point p;
+  //     p.pos = vec3(i * cellSize, 0.f, j * cellSize);
+  //     p.color = vec3(1.f, 1.f, 1.f);
+  //
+  //     vtxs.push_back(p);
+  //     oriVtxs.push_back(p);
+  //   }
+  // }
 
   // std::cout << to_string(vtxs[0].pos) << '\n';
 
@@ -559,17 +559,17 @@ void step() {
 
   fft.ifft2(heightFreqs);
 
-  std::cout << heightFreqs[1][1].real() << '\n';
+  // std::cout << heightFreqs[1][1].real() << '\n';
 
   for (size_t n = 0; n < N; n++) {
     for (size_t m = 0; m < M; m++) {
       int idx = n * N + m;
-      // vec3 &vtx = mesh.vertices[idx];
-      //
-      // vtx.y = heightFreqs[n][m].real() * 1000.f;
+      vec3 &vtx = mesh.vertices[idx];
+
+      vtx.y = heightFreqs[n][m].real();
       // std::cout << "(" << n << ", " << m << "): " << heightFreqs[n][m].real()
       //           << '\n';
-      vtxs[idx].pos.y = heightFreqs[n][m].real() + oriVtxs[idx].pos.y;
+      // vtxs[idx].pos.y = heightFreqs[n][m].real() + oriVtxs[idx].pos.y;
     }
   }
 
