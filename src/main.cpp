@@ -59,12 +59,20 @@ GLfloat vtxsSkybox[] = {
     SIZE, -SIZE, -SIZE, SIZE, SIZE, -SIZE, -SIZE, SIZE, -SIZE};
 
 /* Water */
-int N;
+int N, M;
 float cellSize;
 float Lx, Lz;
+vec3 wind = vec3(1.f, 0, 1.f);
+float A = 1.f; // constant in Phillips Spectrum
+float G = 9.8f;
+float t = 0.f;
+float dt = 0.01f;
+int frameNumber = 0;
 
 Array2D3f waterPos;
 Array2D3f waterN;
+
+FFT fft;
 
 GLuint vboWaterPos, vboWaterN, vaoWater;
 GLint uniWaterM, uniWaterV, uniWaterP;
@@ -86,17 +94,21 @@ GLuint shaderSkybox;
 void computeMatricesFromInputs();
 void keyCallback(GLFWwindow *, int, int, int, int);
 float randf();
+vec2 phillipsSpectrum(vec3);
+vec2 freqForHeight(vec3);
+float dispersion(vec3);
 
 void initGL();
 void initOther();
 void initShader();
 void initMatrix();
 void initSkybox();
-void initMesh();
 void initUniform();
 void initWater();
 
 void step();
+float gaussianRandom(float, float);
+vec4 h0(vec3);
 
 int main(int argc, char **argv) {
   initGL();
@@ -106,7 +118,6 @@ int main(int argc, char **argv) {
   initUniform();
 
   initSkybox();
-  // initMesh();
   initWater();
 
   // for (size_t i = 0; i < waterPos.size(); i++) {
@@ -129,7 +140,11 @@ int main(int argc, char **argv) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // update water
-    step();
+    if (frameNumber > 100) {
+      step();
+
+      frameNumber = 0;
+    }
 
     // view control
     computeMatricesFromInputs();
@@ -153,6 +168,8 @@ int main(int argc, char **argv) {
 
     /* Poll for and process events */
     glfwPollEvents();
+
+    frameNumber++;
   }
 
   glfwTerminate();
@@ -318,7 +335,7 @@ void initGL() {
   glEnable(GL_CULL_FACE);
   glEnable(GL_DEPTH_TEST);
 
-  // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 }
 
 void initOther() {
@@ -459,9 +476,16 @@ void initWater() {
   // initialize parameters
   // change these parameters if water.obj changes
   N = 8;
+  M = N;
   cellSize = 2.5f;
   Lx = 17.5f;
   Lz = Lx;
+
+  /* FFT object */
+  // N sampling points along each axis
+  // compute the lookup table for complex exponent terms
+  fft.N = N;
+  fft.computeWk();
 }
 
 float randf() {
@@ -473,11 +497,42 @@ float randf() {
 
 void step() {
   /* update geometry */
-  for (size_t i = 0; i < mesh.vertices.size(); i++) {
-    vec3 &vtx = mesh.vertices[i];
+  // for (size_t i = 0; i < mesh.vertices.size(); i++) {
+  //   vec3 &vtx = mesh.vertices[i];
+  //
+  //   vtx.y += randf() * 0.01f;
+  // }
+  // height
+  CArray2D heightFreqs(CArray(M), N);
 
-    vtx.y += randf() * 0.01f;
+  for (size_t n = 0; n < N; n++) {
+    for (size_t m = 0; m < M; m++) {
+      vec3 k(2.f * PI * n / Lx, 0, 2.f * PI * m / Lz);
+      vec2 freq = freqForHeight(k);
+
+      Complex cFreq(freq.x, freq.y);
+
+      heightFreqs[n][m] = cFreq;
+    }
   }
+  heightFreqs[0][0] = Complex(0, 0);
+  // heightFreqs[0][0] is (nan, nan)
+  // std::cout << heightFreqs[5][5] << '\n';
+
+  fft.ifft2(heightFreqs);
+
+  std::cout << heightFreqs[5][5] << '\n';
+
+  for (size_t n = 0; n < N; n++) {
+    for (size_t m = 0; m < M; m++) {
+      int idx = n * N + M;
+      vec3 &vtx = mesh.vertices[idx];
+
+      vtx.y = heightFreqs[n][m].real() * 1000.f;
+    }
+  }
+
+  t += dt;
 
   /* update buffer objects */
   int nOfFaces = mesh.faces.size();
@@ -508,3 +563,98 @@ void step() {
                     sizeof(GLfloat) * 3, &vtx);
   }
 }
+
+/* Gaussian random number generator */
+// mean m, standard deviation s
+float gaussianRandom(float m, float s) {
+  float x1, x2, w, y1;
+  static float y2;
+  static int use_last = 0;
+
+  if (use_last) /* use value from previous call */
+  {
+    y1 = y2;
+    use_last = 0;
+  } else {
+    do {
+      x1 = 2.0 * randf() - 1.0; // randf() is uniform in 0..1
+      x2 = 2.0 * randf() - 1.0;
+      w = x1 * x1 + x2 * x2;
+    } while (w >= 1.0);
+
+    w = sqrt((-2.0 * log(w)) / w);
+    y1 = x1 * w;
+    y2 = x2 * w;
+    use_last = 1;
+  }
+
+  return (m + y1 * s);
+}
+
+// (Eq.23) Given a wavevector k
+// Ph(k) and Ph(-k) are returned
+// vec2.x is Ph(k), and vec2.y is Ph(-k)
+// Note: Ph(k) and Ph(-k) are both scalar
+vec2 phillipsSpectrum(vec3 k) {
+  float kLen = glm::length(k);
+  vec3 kDir = glm::normalize(k);
+
+  float V = glm::length(wind);
+  vec3 windDir = glm::normalize(wind);
+
+  float L = V * V / G;
+
+  float commonTerm = A * exp(-1.f / (kLen * kLen * L * L));
+  commonTerm /= (kLen * kLen * kLen * kLen);
+
+  vec2 kw = vec2(dot(kDir, windDir), dot(-kDir, windDir));
+  kw = vec2(kw.x * kw.x, kw.y * kw.y);
+
+  return (commonTerm * kw);
+}
+
+// (Eq.25)
+// compute h0(k) and {h0(-k)}*
+// vec4.xy represent the real and imag part of h0(k)
+// vec4.zw represent the real and imag part of {h0(-k)}*
+vec4 h0(vec3 k) {
+  vec2 gaus = vec2(gaussianRandom(0.f, 1.f), gaussianRandom(0.f, 1.f));
+  vec2 gausConj = vec2(gaus.x, -gaus.y);
+
+  vec2 philSpec = phillipsSpectrum(k);
+
+  vec2 h0k = 1.f / sqrt(2.f) * gaus * sqrt(philSpec.x);
+  vec2 h0kConj = 1.f / sqrt(2.f) * gausConj * sqrt(philSpec.y);
+
+  return vec4(h0k, h0kConj);
+}
+
+// frequency term in Eq.19, from Eq.26
+// Note: the complex from Eq.25 has a format of (a + ib)
+// so be careful to change the complex exponent term
+// into (a + ib) before multiplication
+// (a + bi)(c + di) = (ac - bd) + (ad + bc)i
+vec2 freqForHeight(vec3 k) {
+  float omega = dispersion(k);
+
+  // from complex exponent to the (a + ib) format
+  vec2 eTerm = vec2(cos(omega) * t, sin(omega) * t);
+  vec2 eTermConj = vec2(eTerm.x, -eTerm.y);
+
+  vec4 h0Term = h0(k);
+
+  // the first part of Eq.26
+  vec2 freq;
+  freq.x = h0Term.x * eTerm.x - h0Term.y * eTerm.y;
+  freq.y = h0Term.x * eTerm.y + h0Term.y * eTerm.x;
+
+  // the second part of Eq.26
+  vec2 freqConj;
+  freqConj.x = h0Term.z * eTermConj.x - h0Term.w * eTermConj.y;
+  freqConj.y = h0Term.z * eTermConj.y + h0Term.w * eTermConj.x;
+
+  return vec2(freq.x + freqConj.x, freq.y + freqConj.y);
+}
+
+// (Eq.14) Dispersion relation
+float dispersion(vec3 k) { return sqrt(glm::length(G * k)); }

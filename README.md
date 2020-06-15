@@ -92,3 +92,5 @@ Assume we have a 2D frequency term `F(u, v)`, then
 [Tessendorf, 2001] Tessendorf, Jerry. "Simulating ocean water." Simulating nature: realistic and interactive techniques. SIGGRAPH 1.2 (2001): 5.
 
 [Cooley–Tukey FFT](https://rosettacode.org/wiki/Fast_Fourier_transform#C.2B.2B)
+
+[Gaussian random number generator](https://www.taygeta.com/random/gaussian.html)

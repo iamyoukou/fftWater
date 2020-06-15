@@ -1,5 +1,7 @@
 #include "fft.h"
 
+FFT::FFT() {}
+
 FFT::FFT(int n) {
   N = n;
   computeWk();
@@ -131,10 +133,12 @@ void FFT::computeWk() {
 }
 
 /* Test code */
-// CArray2D test = {{0, 1, 2, 3}, {0, 1, 2, 3}, {0, 1, 2, 3}, {0, 1, 2, 3}};
+// FFT fft(4);
+//
+// CArray2D test = {{1, 2, 3, 4}, {1, 2, 3, 4}, {1, 2, 3, 4}, {1, 2, 3, 4}};
 //
 // /* FFT 2D */
-// fft2(test);
+// fft.fft2(test);
 //
 // std::cout << "after 2D fft:" << '\n';
 // for (size_t i = 0; i < 4; i++) {
@@ -146,7 +150,7 @@ void FFT::computeWk() {
 // std::cout << '\n';
 //
 // /* IFFT 2D */
-// ifft2(test);
+// fft.ifft2(test);
 //
 // std::cout << "after 2D ifft: " << '\n';
 // for (size_t i = 0; i < 4; i++) {
@@ -154,4 +158,5 @@ void FFT::computeWk() {
 //   std::cout << test[i][1].real() << ", ";
 //   std::cout << test[i][2].real() << ", ";
 //   std::cout << test[i][3].real() << '\n';
+// }
 // }
