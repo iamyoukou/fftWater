@@ -22,6 +22,14 @@ using namespace glm;
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 
+/* Define a 3D point */
+typedef struct {
+  vec3 pos;
+  vec3 color;
+  vec3 v;
+  float m;
+} Point;
+
 typedef struct {
   // data index
   GLuint v1, v2, v3;
@@ -70,3 +78,4 @@ void createMesh(Mesh &);
 void updateMesh(Mesh &);
 void findAABB(Mesh &);
 void drawBox(vec3, vec3);
+void drawPoints(std::vector<Point> &);

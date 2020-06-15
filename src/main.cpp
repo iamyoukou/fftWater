@@ -5,14 +5,14 @@ typedef vector<vector<vec3>> Array2D3f;
 
 GLFWwindow *window;
 
-float verticalAngle = -2.15391;
-float horizontalAngle = 1.5649;
+float verticalAngle = -2.02913;
+float horizontalAngle = 1.59961;
 float initialFoV = 45.0f;
 float speed = 5.0f;
 float mouseSpeed = 0.005f;
 float farPlane = 2000.f;
 
-vec3 eyePoint = vec3(8.964328, 9.591134, 7.734172);
+vec3 eyePoint = vec3(8.369260, 8.475504, 25.087240);
 vec3 eyeDirection =
     vec3(sin(verticalAngle) * cos(horizontalAngle), cos(verticalAngle),
          sin(verticalAngle) * sin(horizontalAngle));
@@ -68,6 +68,7 @@ float G = 9.8f;
 float t = 0.f;
 float dt = 0.01f;
 int frameNumber = 0;
+vector<Point> vtxs;
 
 Array2D3f waterPos;
 Array2D3f waterN;
@@ -156,8 +157,9 @@ int main(int argc, char **argv) {
 
     // draw 3d models
     glUseProgram(shaderWater);
-    glBindVertexArray(mesh.vao);
-    glDrawArrays(GL_TRIANGLES, 0, mesh.faces.size() * 3);
+    // glBindVertexArray(mesh.vao);
+    // glDrawArrays(GL_TRIANGLES, 0, mesh.faces.size() * 3);
+    drawPoints(vtxs);
 
     // glUseProgram(shaderWater);
     // glBindVertexArray(vaoWater);
@@ -335,7 +337,9 @@ void initGL() {
   glEnable(GL_CULL_FACE);
   glEnable(GL_DEPTH_TEST);
 
-  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  glEnable(GL_PROGRAM_POINT_SIZE);
+  glPointSize(15);
 }
 
 void initOther() {
@@ -347,7 +351,9 @@ void initShader() {
   shaderSkybox =
       buildShader("./shader/vsSkybox.glsl", "./shader/fsSkybox.glsl");
 
-  shaderWater = buildShader("./shader/vsWater.glsl", "./shader/fsWater.glsl");
+  // shaderWater = buildShader("./shader/vsWater.glsl",
+  // "./shader/fsWater.glsl");
+  shaderWater = buildShader("./shader/vsPoint.glsl", "./shader/fsPoint.glsl");
 }
 
 void initMatrix() {
@@ -442,8 +448,8 @@ void initUniform() {
   // uniLightColor = myGetUniformLocation(shaderWater, "lightColor");
   // glUniform3fv(uniLightColor, 1, value_ptr(lightColor));
 
-  uniLightPos = myGetUniformLocation(shaderWater, "lightPos");
-  glUniform3fv(uniLightPos, 1, value_ptr(lightPos));
+  // uniLightPos = myGetUniformLocation(shaderWater, "lightPos");
+  // glUniform3fv(uniLightPos, 1, value_ptr(lightPos));
 
   // uniLightPower = myGetUniformLocation(shaderWater, "lightPower");
   // glUniform1f(uniLightPower, lightPower);
@@ -470,8 +476,8 @@ void initUniform() {
 }
 
 void initWater() {
-  mesh = loadObj("./mesh/water.obj");
-  createMesh(mesh);
+  // mesh = loadObj("./mesh/water.obj");
+  // createMesh(mesh);
 
   // initialize parameters
   // change these parameters if water.obj changes
@@ -480,6 +486,19 @@ void initWater() {
   cellSize = 2.5f;
   Lx = 17.5f;
   Lz = Lx;
+
+  // test
+  for (size_t i = 0; i < N; i++) {
+    for (size_t j = 0; j < M; j++) {
+      Point p;
+      p.pos = vec3(i * cellSize, 0.f, j * cellSize);
+      p.color = vec3(1.f, 1.f, 1.f);
+
+      vtxs.push_back(p);
+    }
+  }
+
+  // std::cout << to_string(vtxs[0].pos) << '\n';
 
   /* FFT object */
   // N sampling points along each axis
@@ -526,9 +545,10 @@ void step() {
   for (size_t n = 0; n < N; n++) {
     for (size_t m = 0; m < M; m++) {
       int idx = n * N + M;
-      vec3 &vtx = mesh.vertices[idx];
-
-      vtx.y = heightFreqs[n][m].real() * 1000.f;
+      // vec3 &vtx = mesh.vertices[idx];
+      //
+      // vtx.y = heightFreqs[n][m].real() * 1000.f;
+      vtxs[idx].pos.y = heightFreqs[n][m].real() * 1000.f;
     }
   }
 
