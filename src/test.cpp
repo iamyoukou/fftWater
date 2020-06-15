@@ -4,11 +4,14 @@
 
 using namespace std;
 
+typedef vector<vector<float>> Array2D1f;
+
+Array2D1f a1f;
+
 int main(int argc, char const *argv[]) {
-  vector<int> a = {1, 2, 3};
-  vector<int> b = a;
-  a[0] -= 1;
-  std::cout << b[0] << '\n';
+  a1f = Array2D1f(2, vector<float>(3));
+
+  cout << a1f[1][1] << endl;
 
   return 0;
 }

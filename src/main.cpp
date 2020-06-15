@@ -1,7 +1,9 @@
 #include "common.h"
 #include "fft.h"
 
-typedef vector<vector<vec3>> Array2D3f;
+typedef vector<vector<vec3>> Array2D3v;
+typedef vector<vector<float>> Array2D1f;
+typedef vector<vector<vec4>> Array2D4v;
 
 GLFWwindow *window;
 
@@ -63,15 +65,17 @@ int N, M;
 float cellSize;
 float Lx, Lz;
 vec3 wind = vec3(30.f, 0, 30.f);
-float A = 0.001f; // constant in Phillips Spectrum
+float A = 0.1f; // constant in Phillips Spectrum
 float G = 9.8f;
-float t = 1.f;
-float dt = 0.f;
+float t = 0.f;
+float dt = 0.01f;
 int frameNumber = 0;
 vector<Point> vtxs, oriVtxs;
 
-Array2D3f waterPos;
-Array2D3f waterN;
+Array2D3v waterPos;
+Array2D3v waterN;
+Array2D1f tableDisp;
+Array2D4v tableH0;
 
 FFT fft;
 
@@ -96,7 +100,7 @@ void computeMatricesFromInputs();
 void keyCallback(GLFWwindow *, int, int, int, int);
 float randf();
 vec2 phillipsSpectrum(vec3);
-vec2 freqForHeight(vec3);
+vec2 freqForHeight(vec3, int, int);
 float dispersion(vec3);
 
 void initGL();
@@ -507,6 +511,19 @@ void initWater() {
   fft.N = N;
   fft.Lx = Lx;
   fft.computeWk();
+
+  tableDisp = Array2D1f(N, vector<float>(M));
+  tableH0 = Array2D4v(N, vector<vec4>(M));
+
+  for (size_t n = 0; n < N; n++) {
+    for (size_t m = 0; m < M; m++) {
+      vec3 k(2.f * PI * N / Lx, 0.f, 2.f * PI * M / Lz);
+
+      tableDisp[n][m] = dispersion(k);
+
+      tableH0[n][m] = h0(k);
+    }
+  }
 }
 
 float randf() {
@@ -529,7 +546,7 @@ void step() {
   for (size_t n = 0; n < N; n++) {
     for (size_t m = 0; m < M; m++) {
       vec3 k(2.f * PI * n / Lx, 0, 2.f * PI * m / Lz);
-      vec2 freq = freqForHeight(k);
+      vec2 freq = freqForHeight(k, n, m);
 
       // std::cout << "k = " << to_string(k) << '\n';
       // std::cout << "freq = " << to_string(freq) << '\n';
@@ -544,8 +561,6 @@ void step() {
 
   std::cout << heightFreqs[1][1].real() << '\n';
 
-  // test
-
   for (size_t n = 0; n < N; n++) {
     for (size_t m = 0; m < M; m++) {
       int idx = n * N + m;
@@ -554,7 +569,7 @@ void step() {
       // vtx.y = heightFreqs[n][m].real() * 1000.f;
       // std::cout << "(" << n << ", " << m << "): " << heightFreqs[n][m].real()
       //           << '\n';
-      vtxs[idx].pos.y += heightFreqs[n][m].real();
+      vtxs[idx].pos.y = heightFreqs[n][m].real() + oriVtxs[idx].pos.y;
     }
   }
 
@@ -669,16 +684,18 @@ vec4 h0(vec3 k) {
 // so be careful to change the complex exponent term
 // into (a + ib) before multiplication
 // (a + bi)(c + di) = (ac - bd) + (ad + bc)i
-vec2 freqForHeight(vec3 k) {
+vec2 freqForHeight(vec3 k, int n, int m) {
   // std::cout << "k = " << to_string(k) << '\n';
 
-  float omega = dispersion(k);
+  // float omega = dispersion(k);
+  float omega = tableDisp[n][m];
 
   // from complex exponent to the (a + ib) format
   vec2 eTerm = vec2(cos(omega) * t, sin(omega) * t);
   vec2 eTermConj = vec2(eTerm.x, -eTerm.y);
 
-  vec4 h0Term = h0(k);
+  // vec4 h0Term = h0(k);
+  vec4 h0Term = tableH0[n][m];
 
   // std::cout << "omega = " << omega << '\n';
   // std::cout << "eTerm = " << to_string(eTerm) << '\n';
