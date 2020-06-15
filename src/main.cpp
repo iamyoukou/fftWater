@@ -580,15 +580,12 @@ void initWater() {
   }
 
   // for (size_t i = 0; i < nOfQuads * 2; i++) {
-  //   cout << "(" << aWaterVtxs[i * 9 + 0] << " " << aWaterVtxs[i * 9 + 1] << "
-  //   "
-  //        << aWaterVtxs[i * 9 + 2] << "), "
-  //        << "(" << aWaterVtxs[i * 9 + 3] << " " << aWaterVtxs[i * 9 + 4] << "
-  //        "
-  //        << aWaterVtxs[i * 9 + 5] << "), "
-  //        << "(" << aWaterVtxs[i * 9 + 6] << " " << aWaterVtxs[i * 9 + 7] << "
-  //        "
-  //        << aWaterVtxs[i * 9 + 8] << ")" << endl;
+  //   cout << "(" << aWaterNs[i * 9 + 0] << ", " << aWaterNs[i * 9 + 1] << ", "
+  //        << aWaterNs[i * 9 + 2] << "), "
+  //        << "(" << aWaterNs[i * 9 + 3] << ", " << aWaterNs[i * 9 + 4] << ", "
+  //        << aWaterNs[i * 9 + 5] << "), "
+  //        << "(" << aWaterNs[i * 9 + 6] << ", " << aWaterNs[i * 9 + 7] << ", "
+  //        << aWaterNs[i * 9 + 8] << ")" << endl;
   // }
 
   // buffer object
@@ -605,14 +602,12 @@ void initWater() {
   glEnableVertexAttribArray(0);
 
   // vbo for vertex normal
-  // glGenBuffers(1, &vboWaterN);
-  // glBindBuffer(GL_ARRAY_BUFFER, vboWaterN);
-  // glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * nOfQuads * 2 * 3 * 3,
-  //              aWaterNs, GL_STREAM_DRAW);
-  // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-  // glEnableVertexAttribArray(2);
-
-  // std::cout << to_string(vtxs[0].pos) << '\n';
+  glGenBuffers(1, &vboWaterN);
+  glBindBuffer(GL_ARRAY_BUFFER, vboWaterN);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * nOfQuads * 2 * 3 * 3,
+               aWaterNs, GL_STREAM_DRAW);
+  glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+  glEnableVertexAttribArray(2);
 
   /* FFT object */
   // N sampling points along each axis
