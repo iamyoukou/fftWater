@@ -145,11 +145,11 @@ int main(int argc, char **argv) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // update water
-    if (frameNumber > 1) {
-      step();
+    // if (frameNumber > 1) {
+    step();
 
-      frameNumber = 0;
-    }
+    //   frameNumber = 0;
+    // }
 
     // view control
     computeMatricesFromInputs();
@@ -341,7 +341,7 @@ void initGL() {
   glEnable(GL_CULL_FACE);
   glEnable(GL_DEPTH_TEST);
 
-  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   // glEnable(GL_PROGRAM_POINT_SIZE);
   // glPointSize(15);
 }
@@ -480,7 +480,7 @@ void initUniform() {
 }
 
 void initWater() {
-  mesh = loadObj("./mesh/water.obj");
+  mesh = loadObj("./mesh/waterSmooth.obj");
   createMesh(mesh);
 
   // initialize parameters
@@ -540,36 +540,79 @@ void step() {
   //
   //   vtx.y += randf() * 0.01f;
   // }
+
   // height
   CArray2D heightFreqs(CArray(M), N);
+
+  // normal
+  // CArray2D slopeFreqsX(CArray(M), N);
+  // CArray2D slopeFreqsZ(CArray(M), N);
 
   for (size_t n = 0; n < N; n++) {
     for (size_t m = 0; m < M; m++) {
       vec3 k(2.f * PI * n / Lx, 0, 2.f * PI * m / Lz);
-      vec2 freq = freqForHeight(k, n, m);
-
       // std::cout << "k = " << to_string(k) << '\n';
-      // std::cout << "freq = " << to_string(freq) << '\n';
 
-      Complex cFreq(freq.x, freq.y);
+      vec2 freqHeight = freqForHeight(k, n, m);
+      // std::cout << "freqHeight = " << to_string(freqHeight) << '\n';
 
-      heightFreqs[n][m] = cFreq;
+      // (a + bi)(c + di) = (ac - bd) + (ad + bc)i
+      // vec2 freqSlopeX;
+      // freqSlopeX.x = 0.f - k.x * freqHeight.y;
+      // freqSlopeX.y = 0.f + k.x * freqHeight.x;
+      // // std::cout << "freqSlopeX = " << to_string(freqSlopeX) << '\n';
+      //
+      // vec2 freqSlopeZ;
+      // freqSlopeZ.x = 0.f - k.z * freqHeight.y;
+      // freqSlopeZ.y = 0.f + k.z * freqHeight.x;
+
+      // freqSlopeZ always equals to (0, 0) ?
+      // std::cout << "freqSlopeZ = " << to_string(freqSlopeZ) << '\n';
+
+      // to use FFT, need to change from vec2 to Complex
+      Complex cFreqHeight(freqHeight.x, freqHeight.y);
+      heightFreqs[n][m] = cFreqHeight;
+
+      // Complex cFreqSlopeX(freqSlopeX.x, freqSlopeX.y);
+      // slopeFreqsX[n][m] = cFreqSlopeX;
+      //
+      // Complex cFreqSlopeZ(freqSlopeZ.x, freqSlopeZ.y);
+      // slopeFreqsZ[n][m] = cFreqSlopeZ;
     }
   }
 
+  // perform IFFT
   fft.ifft2(heightFreqs);
+  // fft.ifft2(slopeFreqsX);
+  // fft.ifft2(slopeFreqsZ);
 
-  // std::cout << heightFreqs[1][1].real() << '\n';
+  // as the grid exported from Blender only has one vn
+  // we need to build a std::vector to temporarily store vertex normals
+  // vector<vec3> vtxNs;
 
+  /* update geometry */
   for (size_t n = 0; n < N; n++) {
     for (size_t m = 0; m < M; m++) {
+      // height
       int idx = n * N + m;
       vec3 &vtx = mesh.vertices[idx];
 
       vtx.y = heightFreqs[n][m].real();
-      // std::cout << "(" << n << ", " << m << "): " << heightFreqs[n][m].real()
-      //           << '\n';
-      // vtxs[idx].pos.y = heightFreqs[n][m].real() + oriVtxs[idx].pos.y;
+
+      // normal
+      // vec3 slope;
+      // slope.x = slopeFreqsX[n][m].real();
+      // slope.y = 0;
+      // slope.z = slopeFreqsZ[n][m].real();
+      //
+      // // std::cout << to_string(slope) << '\n';
+      //
+      // vec3 normal = vec3(0, 1, 0) - slope;
+      // normal = glm::normalize(normal);
+      //
+      // // std::cout << to_string(normal) << '\n';
+      //
+      // vtxNs.push_back(normal);
     }
   }
 
@@ -587,7 +630,6 @@ void step() {
                GL_STREAM_DRAW);
 
   for (size_t i = 0; i < nOfFaces; i++) {
-
     int vtxIdx = mesh.faces[i].v1;
     vec3 vtx = mesh.vertices[vtxIdx];
     glBufferSubData(GL_ARRAY_BUFFER, sizeof(GLfloat) * (i * 9 + 0),
@@ -603,6 +645,29 @@ void step() {
     glBufferSubData(GL_ARRAY_BUFFER, sizeof(GLfloat) * (i * 9 + 6),
                     sizeof(GLfloat) * 3, &vtx);
   }
+
+  // // normal
+  // glBindBuffer(GL_ARRAY_BUFFER, mesh.vboNormals);
+  // // buffer orphaning
+  // glBufferData(GL_ARRAY_BUFFER, vtxNs.size() * 3 * sizeof(GLfloat), NULL,
+  //              GL_STREAM_DRAW);
+  //
+  // for (size_t i = 0; i < nOfFaces; i++) {
+  //   int vtxIdx = mesh.faces[i].vn1;
+  //   vec3 vtxN = mesh.vertices[vtxIdx];
+  //   glBufferSubData(GL_ARRAY_BUFFER, sizeof(GLfloat) * (i * 9 + 0),
+  //                   sizeof(GLfloat) * 3, &vtx);
+  //
+  //   vtxIdx = mesh.faces[i].vn2;
+  //   vtx = mesh.vertices[vtxIdx];
+  //   glBufferSubData(GL_ARRAY_BUFFER, sizeof(GLfloat) * (i * 9 + 3),
+  //                   sizeof(GLfloat) * 3, &vtx);
+  //
+  //   vtxIdx = mesh.faces[i].vn3;
+  //   vtx = mesh.vertices[vtxIdx];
+  //   glBufferSubData(GL_ARRAY_BUFFER, sizeof(GLfloat) * (i * 9 + 6),
+  //                   sizeof(GLfloat) * 3, &vtx);
+  // }
 }
 
 /* Gaussian random number generator */
