@@ -12,7 +12,7 @@ float speed = 5.0f;
 float mouseSpeed = 0.005f;
 float farPlane = 2000.f;
 
-vec3 eyePoint = vec3(8.369260, 8.475504, 25.087240);
+vec3 eyePoint = vec3(3.490209, 2.592932, 6.379744);
 vec3 eyeDirection =
     vec3(sin(verticalAngle) * cos(horizontalAngle), cos(verticalAngle),
          sin(verticalAngle) * sin(horizontalAngle));
@@ -62,13 +62,13 @@ GLfloat vtxsSkybox[] = {
 int N, M;
 float cellSize;
 float Lx, Lz;
-vec3 wind = vec3(1.f, 0, 1.f);
-float A = 1.f; // constant in Phillips Spectrum
+vec3 wind = vec3(30.f, 0, 30.f);
+float A = 0.001f; // constant in Phillips Spectrum
 float G = 9.8f;
-float t = 0.f;
-float dt = 0.01f;
+float t = 1.f;
+float dt = 0.f;
 int frameNumber = 0;
-vector<Point> vtxs;
+vector<Point> vtxs, oriVtxs;
 
 Array2D3f waterPos;
 Array2D3f waterN;
@@ -141,7 +141,7 @@ int main(int argc, char **argv) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // update water
-    if (frameNumber > 100) {
+    if (frameNumber > 1) {
       step();
 
       frameNumber = 0;
@@ -481,10 +481,10 @@ void initWater() {
 
   // initialize parameters
   // change these parameters if water.obj changes
-  N = 8;
+  N = 16;
   M = N;
-  cellSize = 2.5f;
-  Lx = 17.5f;
+  cellSize = 1.f;
+  Lx = cellSize * (N - 1);
   Lz = Lx;
 
   // test
@@ -495,6 +495,7 @@ void initWater() {
       p.color = vec3(1.f, 1.f, 1.f);
 
       vtxs.push_back(p);
+      oriVtxs.push_back(p);
     }
   }
 
@@ -504,6 +505,7 @@ void initWater() {
   // N sampling points along each axis
   // compute the lookup table for complex exponent terms
   fft.N = N;
+  fft.Lx = Lx;
   fft.computeWk();
 }
 
@@ -529,26 +531,30 @@ void step() {
       vec3 k(2.f * PI * n / Lx, 0, 2.f * PI * m / Lz);
       vec2 freq = freqForHeight(k);
 
+      // std::cout << "k = " << to_string(k) << '\n';
+      // std::cout << "freq = " << to_string(freq) << '\n';
+
       Complex cFreq(freq.x, freq.y);
 
       heightFreqs[n][m] = cFreq;
     }
   }
-  heightFreqs[0][0] = Complex(0, 0);
-  // heightFreqs[0][0] is (nan, nan)
-  // std::cout << heightFreqs[5][5] << '\n';
 
   fft.ifft2(heightFreqs);
 
-  std::cout << heightFreqs[5][5] << '\n';
+  std::cout << heightFreqs[1][1].real() << '\n';
+
+  // test
 
   for (size_t n = 0; n < N; n++) {
     for (size_t m = 0; m < M; m++) {
-      int idx = n * N + M;
+      int idx = n * N + m;
       // vec3 &vtx = mesh.vertices[idx];
       //
       // vtx.y = heightFreqs[n][m].real() * 1000.f;
-      vtxs[idx].pos.y = heightFreqs[n][m].real() * 1000.f;
+      // std::cout << "(" << n << ", " << m << "): " << heightFreqs[n][m].real()
+      //           << '\n';
+      vtxs[idx].pos.y += heightFreqs[n][m].real();
     }
   }
 
@@ -617,6 +623,11 @@ float gaussianRandom(float m, float s) {
 // Note: Ph(k) and Ph(-k) are both scalar
 vec2 phillipsSpectrum(vec3 k) {
   float kLen = glm::length(k);
+
+  // when kLen == 0, kw will be (nan, nan)
+  if (kLen < 0.00001f)
+    return vec2(0, 0);
+
   vec3 kDir = glm::normalize(k);
 
   float V = glm::length(wind);
@@ -642,9 +653,13 @@ vec4 h0(vec3 k) {
   vec2 gausConj = vec2(gaus.x, -gaus.y);
 
   vec2 philSpec = phillipsSpectrum(k);
+  // std::cout << "philSpec = " << to_string(philSpec) << '\n';
 
   vec2 h0k = 1.f / sqrt(2.f) * gaus * sqrt(philSpec.x);
   vec2 h0kConj = 1.f / sqrt(2.f) * gausConj * sqrt(philSpec.y);
+
+  // std::cout << "h0k = " << to_string(h0k) << '\n';
+  // std::cout << "h0kConj = " << to_string(h0kConj) << '\n';
 
   return vec4(h0k, h0kConj);
 }
@@ -655,6 +670,8 @@ vec4 h0(vec3 k) {
 // into (a + ib) before multiplication
 // (a + bi)(c + di) = (ac - bd) + (ad + bc)i
 vec2 freqForHeight(vec3 k) {
+  // std::cout << "k = " << to_string(k) << '\n';
+
   float omega = dispersion(k);
 
   // from complex exponent to the (a + ib) format
@@ -662,6 +679,11 @@ vec2 freqForHeight(vec3 k) {
   vec2 eTermConj = vec2(eTerm.x, -eTerm.y);
 
   vec4 h0Term = h0(k);
+
+  // std::cout << "omega = " << omega << '\n';
+  // std::cout << "eTerm = " << to_string(eTerm) << '\n';
+  // std::cout << "eTermConj = " << to_string(eTermConj) << '\n';
+  // std::cout << "h0Term = " << to_string(h0Term) << '\n';
 
   // the first part of Eq.26
   vec2 freq;
@@ -677,4 +699,4 @@ vec2 freqForHeight(vec3 k) {
 }
 
 // (Eq.14) Dispersion relation
-float dispersion(vec3 k) { return sqrt(glm::length(G * k)); }
+float dispersion(vec3 k) { return sqrt(glm::length(k) * G); }

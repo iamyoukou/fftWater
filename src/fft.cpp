@@ -43,7 +43,7 @@ void FFT::ifft(CArray &x) {
   x = x.apply(std::conj);
 
   // scale the numbers
-  x /= x.size();
+  // x /= x.size();
 }
 
 void FFT::fft2(CArray2D &x) {
@@ -128,7 +128,8 @@ void FFT::computeWk() {
   Wk.resize(N);
 
   for (size_t i = 0; i < Wk.size(); i++) {
-    Wk[i] = polar(1.0, -2 * PI * i / N);
+    // Wk[i] = polar(1.0, -2 * PI * i / N);
+    Wk[i] = polar(1.0, -2 * PI * i / Lx);
   }
 }
 

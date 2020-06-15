@@ -15,6 +15,7 @@ class FFT {
 public:
   // # of sample points along one axis
   int N;
+  float Lx;
 
   // a lookup table for exponent terms
   CArray Wk;
