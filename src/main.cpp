@@ -691,7 +691,7 @@ vec2 freqForHeight(vec3 k, int n, int m) {
   float omega = tableDisp[n][m];
 
   // from complex exponent to the (a + ib) format
-  vec2 eTerm = vec2(cos(omega) * t, sin(omega) * t);
+  vec2 eTerm = vec2(cos(omega * t), sin(omega * t));
   vec2 eTermConj = vec2(eTerm.x, -eTerm.y);
 
   // vec4 h0Term = h0(k);
