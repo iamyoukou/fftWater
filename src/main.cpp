@@ -696,12 +696,12 @@ void step() {
         idx2 = idx0 + M;
       }
       // column border
-      else if (m == M - 1) {
-        idx1 = idx0 - 1;
-        idx2 = idx0 - M;
+      else if (m == M - 1 && n < N - 1) {
+        idx1 = idx0 + M;
+        idx2 = idx0 - 1;
       }
       // row border
-      else if (n == N - 1) {
+      else {
         idx1 = idx0 - M;
         idx2 = idx0 + 1;
       }
@@ -911,7 +911,7 @@ void computeWaterGeometry() {
 
   for (size_t i = 0; i < N - 1; i++) {
     for (size_t j = 0; j < M - 1; j++) {
-      int idx0 = i * N + j;
+      int idx0 = i * M + j;
       int idx1 = idx0 + 1;
       int idx2 = idx1 + M;
       int idx3 = idx2 - 1;
