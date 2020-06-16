@@ -559,8 +559,8 @@ void step() {
   CArray2D heightFreqs(CArray(M), N);
 
   // normal
-  // CArray2D slopeFreqsX(CArray(M), N);
-  // CArray2D slopeFreqsZ(CArray(M), N);
+  CArray2D slopeFreqsX(CArray(M), N);
+  CArray2D slopeFreqsZ(CArray(M), N);
 
   for (size_t n = 0; n < N; n++) {
     for (size_t m = 0; m < M; m++) {
@@ -571,14 +571,14 @@ void step() {
       // std::cout << "freqHeight = " << to_string(freqHeight) << '\n';
 
       // (a + bi)(c + di) = (ac - bd) + (ad + bc)i
-      // vec2 freqSlopeX;
-      // freqSlopeX.x = 0.f - k.x * freqHeight.y;
-      // freqSlopeX.y = 0.f + k.x * freqHeight.x;
-      // // std::cout << "freqSlopeX = " << to_string(freqSlopeX) << '\n';
-      //
-      // vec2 freqSlopeZ;
-      // freqSlopeZ.x = 0.f - k.z * freqHeight.y;
-      // freqSlopeZ.y = 0.f + k.z * freqHeight.x;
+      vec2 freqSlopeX;
+      freqSlopeX.x = 0.f - k.x * freqHeight.y;
+      freqSlopeX.y = 0.f + k.x * freqHeight.x;
+      // std::cout << "freqSlopeX = " << to_string(freqSlopeX) << '\n';
+
+      vec2 freqSlopeZ;
+      freqSlopeZ.x = 0.f - k.z * freqHeight.y;
+      freqSlopeZ.y = 0.f + k.z * freqHeight.x;
 
       // freqSlopeZ always equals to (0, 0) ?
       // std::cout << "freqSlopeZ = " << to_string(freqSlopeZ) << '\n';
@@ -587,18 +587,18 @@ void step() {
       Complex cFreqHeight(freqHeight.x, freqHeight.y);
       heightFreqs[n][m] = cFreqHeight;
 
-      // Complex cFreqSlopeX(freqSlopeX.x, freqSlopeX.y);
-      // slopeFreqsX[n][m] = cFreqSlopeX;
-      //
-      // Complex cFreqSlopeZ(freqSlopeZ.x, freqSlopeZ.y);
-      // slopeFreqsZ[n][m] = cFreqSlopeZ;
+      Complex cFreqSlopeX(freqSlopeX.x, freqSlopeX.y);
+      slopeFreqsX[n][m] = cFreqSlopeX;
+
+      Complex cFreqSlopeZ(freqSlopeZ.x, freqSlopeZ.y);
+      slopeFreqsZ[n][m] = cFreqSlopeZ;
     }
   }
 
   // perform IFFT
   fft.ifft2(heightFreqs);
-  // fft.ifft2(slopeFreqsX);
-  // fft.ifft2(slopeFreqsZ);
+  fft.ifft2(slopeFreqsX);
+  fft.ifft2(slopeFreqsZ);
 
   // update geometry
   // N rows, M columns
@@ -609,21 +609,51 @@ void step() {
       vWaterVtxs[idx].y = heightFreqs[n][m].real();
 
       // normal
-      // vec3 slope;
-      // slope.x = slopeFreqsX[n][m].real();
-      // slope.y = 0;
-      // slope.z = slopeFreqsZ[n][m].real();
-      //
-      // // std::cout << to_string(slope) << '\n';
-      //
-      // vec3 normal = vec3(0, 1, 0) - slope;
-      // normal = glm::normalize(normal);
-      //
-      // // std::cout << to_string(normal) << '\n';
-      //
-      // vWaterNs[idx] = normal;
+      vec3 slope;
+      slope.x = slopeFreqsX[n][m].real();
+      slope.y = 0;
+      slope.z = slopeFreqsZ[n][m].real();
+
+      // std::cout << to_string(slope) << '\n';
+
+      vec3 normal = vec3(0, 1, 0) - slope;
+      normal = glm::normalize(normal);
+
+      // std::cout << to_string(normal) << '\n';
+
+      vWaterNs[idx] = normal;
     }
   }
+
+  // update normal using two edges
+  // for (size_t n = 0; n < N; n++) {
+  //   for (size_t m = 0; m < M; m++) {
+  //     int idx0 = n * N + m;
+  //     int idx1, idx2;
+  //
+  //     // if not border
+  //     if (m < M - 1 && n < N - 1) {
+  //       idx1 = idx0 + 1;
+  //       idx2 = idx0 + M;
+  //     }
+  //     // column border
+  //     else if (m == M - 1) {
+  //       idx1 = idx0 - 1;
+  //       idx2 = idx0 - M;
+  //     }
+  //     // row border
+  //     else if (n == N - 1) {
+  //       idx1 = idx0 - M;
+  //       idx2 = idx0 + 1;
+  //     }
+  //
+  //     vec3 edge0 = vWaterVtxs[idx1] - vWaterVtxs[idx0];
+  //     vec3 edge1 = vWaterVtxs[idx2] - vWaterVtxs[idx0];
+  //     vec3 normal = glm::normalize(glm::cross(edge0, edge1));
+  //
+  //     vWaterNs[idx0] = normal;
+  //   }
+  // }
 
   t += dt;
 
