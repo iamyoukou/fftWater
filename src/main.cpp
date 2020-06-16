@@ -64,11 +64,11 @@ GLfloat vtxsSkybox[] = {
 int N, M;
 float cellSize;
 float Lx, Lz;
-vec3 wind = vec3(30.f, 0, 30.f);
-float A = 1.f; // constant in Phillips Spectrum
+vec3 wind = vec3(15.f, 0, -15.f);
+float A = 0.01f; // constant in Phillips Spectrum
 float G = 9.8f;
 float t = 0.f;
-float dt = 0.0025f;
+float dt = 0.01f;
 vector<vec3> vWaterVtxs, vWaterNs;
 GLfloat *aWaterVtxs, *aWaterNs;
 int nOfQuads;
@@ -479,7 +479,7 @@ void initWater() {
   // N rows, M columns
   N = 16;
   M = N;
-  cellSize = 0.5f;
+  cellSize = 1.f;
   Lx = cellSize * (N - 1);
   Lz = Lx;
 
@@ -537,7 +537,7 @@ void initWater() {
 
   for (size_t n = 0; n < N; n++) {
     for (size_t m = 0; m < M; m++) {
-      vec3 k(2.f * PI * N / Lx, 0.f, 2.f * PI * M / Lz);
+      vec3 k(2.f * PI * n / Lx, 0.f, 2.f * PI * m / Lz);
 
       tableDisp[n][m] = dispersion(k);
 
@@ -564,24 +564,31 @@ void step() {
 
   for (size_t n = 0; n < N; n++) {
     for (size_t m = 0; m < M; m++) {
+      int testIdx = n * M + m;
+
       vec3 k(2.f * PI * n / Lx, 0, 2.f * PI * m / Lz);
       // std::cout << "k = " << to_string(k) << '\n';
 
       vec2 freqHeight = freqForHeight(k, n, m);
+
+      // if (testIdx == 0)
       // std::cout << "freqHeight = " << to_string(freqHeight) << '\n';
 
       // (a + bi)(c + di) = (ac - bd) + (ad + bc)i
       vec2 freqSlopeX;
-      freqSlopeX.x = 0.f - k.x * freqHeight.y;
-      freqSlopeX.y = 0.f + k.x * freqHeight.x;
+      freqSlopeX.x = -k.x * freqHeight.y;
+      freqSlopeX.y = k.x * freqHeight.x;
+
+      // if (testIdx == 0)
       // std::cout << "freqSlopeX = " << to_string(freqSlopeX) << '\n';
 
       vec2 freqSlopeZ;
-      freqSlopeZ.x = 0.f - k.z * freqHeight.y;
-      freqSlopeZ.y = 0.f + k.z * freqHeight.x;
+      freqSlopeZ.x = -k.z * freqHeight.y;
+      freqSlopeZ.y = k.z * freqHeight.x;
 
-      // freqSlopeZ always equals to (0, 0) ?
+      // if (testIdx == 0)
       // std::cout << "freqSlopeZ = " << to_string(freqSlopeZ) << '\n';
+      // std::cout << '\n';
 
       // to use FFT, need to change from vec2 to Complex
       Complex cFreqHeight(freqHeight.x, freqHeight.y);
@@ -614,7 +621,8 @@ void step() {
       slope.y = 0;
       slope.z = slopeFreqsZ[n][m].real();
 
-      // std::cout << to_string(slope) << '\n';
+      // if (idx == 0)
+      //   std::cout << "slope vector: " << to_string(slope) << '\n';
 
       vec3 normal = vec3(0, 1, 0) - slope;
       normal = glm::normalize(normal);
@@ -622,38 +630,46 @@ void step() {
       // std::cout << to_string(normal) << '\n';
 
       vWaterNs[idx] = normal;
+
+      // std::cout << "use slope: " << to_string(normal) << '\n';
     }
   }
 
+  // std::cout << "use slope: " << to_string(vWaterNs[0]) << '\n';
+
   // update normal using two edges
-  // for (size_t n = 0; n < N; n++) {
-  //   for (size_t m = 0; m < M; m++) {
-  //     int idx0 = n * N + m;
-  //     int idx1, idx2;
-  //
-  //     // if not border
-  //     if (m < M - 1 && n < N - 1) {
-  //       idx1 = idx0 + 1;
-  //       idx2 = idx0 + M;
-  //     }
-  //     // column border
-  //     else if (m == M - 1) {
-  //       idx1 = idx0 - 1;
-  //       idx2 = idx0 - M;
-  //     }
-  //     // row border
-  //     else if (n == N - 1) {
-  //       idx1 = idx0 - M;
-  //       idx2 = idx0 + 1;
-  //     }
-  //
-  //     vec3 edge0 = vWaterVtxs[idx1] - vWaterVtxs[idx0];
-  //     vec3 edge1 = vWaterVtxs[idx2] - vWaterVtxs[idx0];
-  //     vec3 normal = glm::normalize(glm::cross(edge0, edge1));
-  //
-  //     vWaterNs[idx0] = normal;
-  //   }
-  // }
+  for (size_t n = 0; n < N; n++) {
+    for (size_t m = 0; m < M; m++) {
+      int idx0 = n * N + m;
+      int idx1, idx2;
+
+      // if not border
+      if (m < M - 1 && n < N - 1) {
+        idx1 = idx0 + 1;
+        idx2 = idx0 + M;
+      }
+      // column border
+      else if (m == M - 1) {
+        idx1 = idx0 - 1;
+        idx2 = idx0 - M;
+      }
+      // row border
+      else if (n == N - 1) {
+        idx1 = idx0 - M;
+        idx2 = idx0 + 1;
+      }
+
+      vec3 edge0 = vWaterVtxs[idx1] - vWaterVtxs[idx0];
+      vec3 edge1 = vWaterVtxs[idx2] - vWaterVtxs[idx0];
+      vec3 normal = glm::normalize(glm::cross(edge0, edge1));
+
+      vWaterNs[idx0] = normal;
+
+      // test
+      // if (idx0 == 0)
+      //   std::cout << "use two edges: " << to_string(normal) << '\n';
+    }
+  }
 
   t += dt;
 
@@ -808,6 +824,7 @@ vec2 freqForHeight(vec3 k, int n, int m) {
   // std::cout << "eTerm = " << to_string(eTerm) << '\n';
   // std::cout << "eTermConj = " << to_string(eTermConj) << '\n';
   // std::cout << "h0Term = " << to_string(h0Term) << '\n';
+  // std::cout << '\n';
 
   // the first part of Eq.26
   vec2 freq;
