@@ -76,8 +76,8 @@ int nOfQuads;
 
 Array2D3v waterPos;
 Array2D3v waterN;
-Array2D1f tableDisp;
-Array2D4v tableH0;
+Array2D1f tabDisp;
+CArray2D tabH0, tabH0Conj;
 
 GLuint vaoWater, vboWaterVtx, vboWaterN;
 
@@ -117,8 +117,8 @@ void computeWaterGeometry();
 void updateWaterGeometry();
 
 void step();
-vec2 gaussianRandom(float, float);
-vec4 h0Tilde(int, int);
+Complex gaussianRandom(float, float);
+Complex h0Tilde(int, int);
 
 int main(int argc, char **argv) {
   initGL();
@@ -552,13 +552,15 @@ void initWater() {
   fft.Lx = Lx;
   fft.computeWk();
 
-  tableDisp = Array2D1f(N, vector<float>(M));
-  tableH0 = Array2D4v(N, vector<vec4>(M));
+  tabDisp = Array2D1f(N, vector<float>(M));
+  tabH0 = CArray2D(CArray(M), N);
+  tabH0Conj = CArray2D(CArray(M), N);
 
   for (size_t n = 0; n < N; n++) {
     for (size_t m = 0; m < M; m++) {
-      tableDisp[n][m] = dispersion(n, m);
-      tableH0[n][m] = h0Tilde(n, m);
+      tabDisp[n][m] = dispersion(n, m);
+      tabH0[n][m] = h0Tilde(n, m);
+      tabH0Conj[n][m] = conj(h0Tilde(-n, -m));
     }
   }
 }
@@ -717,7 +719,7 @@ void step() {
 
 /* Gaussian random number generator */
 // mean m, standard deviation s
-vec2 gaussianRandom(float m, float s) {
+Complex gaussianRandom(float m, float s) {
   float x1, x2, w, y1;
   do {
     x1 = 2.0 * randf() - 1.0; // randf() is uniform in 0..1
@@ -727,7 +729,7 @@ vec2 gaussianRandom(float m, float s) {
 
   w = sqrt((-2.0 * log(w)) / w);
 
-  return vec2(x1 * w, x2 * w);
+  return Complex(x1 * w, x2 * w);
 }
 
 // (Eq.23) Given a wavevector k
@@ -765,23 +767,14 @@ float phillipsSpectrum(int n, int m) {
 }
 
 // (Eq.25)
-vec4 h0Tilde(int n, int m) {
-  vec2 gaus = gaussianRandom(0.f, 1.f);
+Complex h0Tilde(int n, int m) {
+  Complex gaus = gaussianRandom(0.f, 1.f);
 
-  vec2 gausConj = gaussianRandom(0.f, 1.f);
-  gausConj.y = -gausConj.y;
+  double philSpec = double(phillipsSpectrum(n, m));
 
-  float philSpec = phillipsSpectrum(n, m);
-  float philSpecConj = phillipsSpectrum(-n, -m);
-  // std::cout << "philSpec = " << to_string(philSpec) << '\n';
+  Complex res = gaus * sqrt(philSpec / 2.f);
 
-  vec2 h0k = gaus * sqrt(philSpec / 2.f);
-  vec2 h0kConj = gausConj * sqrt(philSpecConj / 2.f);
-
-  // std::cout << "h0k = " << to_string(h0k) << '\n';
-  // std::cout << "h0kConj = " << to_string(h0kConj) << '\n';
-
-  return vec4(h0k, h0kConj);
+  return res;
 }
 
 // frequency term in Eq.19, from Eq.26
@@ -793,13 +786,14 @@ Complex hTilde(int n, int m) {
   // std::cout << "k = " << to_string(k) << '\n';
 
   // float omega = dispersion(k);
-  float omega = tableDisp[n][m];
+  float wt = tabDisp[n][m] * t;
 
   // from complex exponent to the (a + ib) format
-  vec2 eTerm = vec2(cos(omega * t), sin(omega * t));
-  vec2 eTermConj = vec2(eTerm.x, -eTerm.y);
+  Complex eTerm(cos(wt), sin(wt));
+  Complex eTermConj(eTerm.real(), -eTerm.imag());
 
-  vec4 h0Term = tableH0[n][m];
+  Complex h0Term = tabH0[n][m];
+  Complex h0TermConj = tabH0Conj[n][m];
 
   // std::cout << "omega = " << omega << '\n';
   // std::cout << "eTerm = " << to_string(eTerm) << '\n';
@@ -807,24 +801,11 @@ Complex hTilde(int n, int m) {
   // std::cout << "h0Term = " << to_string(h0Term) << '\n';
   // std::cout << '\n';
 
-  // the first part of Eq.26
-  vec2 freq;
-  freq.x = h0Term.x * eTerm.x - h0Term.y * eTerm.y;
-  freq.y = h0Term.x * eTerm.y + h0Term.y * eTerm.x;
-
-  // the second part of Eq.26
-  vec2 freqConj;
-  freqConj.x = h0Term.z * eTermConj.x - h0Term.w * eTermConj.y;
-  freqConj.y = h0Term.z * eTermConj.y + h0Term.w * eTermConj.x;
-
-  return Complex(freq.x + freqConj.x, freq.y + freqConj.y);
+  return (h0Term * eTerm + h0TermConj * eTermConj);
 }
 
 // (Eq.14) Dispersion relation
 float dispersion(int n, int m) {
-  n = n - N / 2.f;
-  m = m - M / 2.f;
-
   vec3 k(2.f * PI * n / Lx, 0.f, 2.f * PI * m / Lz);
 
   float omega0 = 2.f * PI / 200.f;
