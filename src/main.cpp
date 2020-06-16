@@ -65,7 +65,7 @@ int N, M;
 float cellSize;
 float Lx, Lz;
 vec3 wind = vec3(10.f, 0, 5.f);
-float A = 0.01f; // constant in Phillips Spectrum
+float A = 0.005f; // constant in Phillips Spectrum
 float G = 9.8f;
 float t = 0.f;
 float dt = 0.01f;
@@ -73,7 +73,7 @@ vector<vec3> vWaterVtxsOri, vWaterVtxs, vWaterNs;
 GLfloat *aWaterVtxs, *aWaterNs;
 int nOfQuads;
 float omega0;
-float T0 = 2.f;
+float T0 = 50.f; // huge effect
 
 Array2D3v waterPos;
 Array2D3v waterN;
@@ -565,8 +565,8 @@ void step() {
   CArray2D heightFreqs(CArray(M), N);
 
   // normal
-  CArray2D slopeFreqsX(CArray(M), N);
-  CArray2D slopeFreqsZ(CArray(M), N);
+  // CArray2D slopeFreqsX(CArray(M), N);
+  // CArray2D slopeFreqsZ(CArray(M), N);
 
   // horizontal displacement
   CArray2D displaceFreqsX(CArray(M), N);
@@ -592,16 +592,16 @@ void step() {
       // std::cout << "freqHeight = " << to_string(freqHeight) << '\n';
 
       // (a + bi)(c + di) = (ac - bd) + (ad + bc)i
-      vec2 freqSlopeX;
-      freqSlopeX.x = -k.x * freqHeight.y;
-      freqSlopeX.y = k.x * freqHeight.x;
+      // vec2 freqSlopeX;
+      // freqSlopeX.x = -k.x * freqHeight.y;
+      // freqSlopeX.y = k.x * freqHeight.x;
 
       // if (testIdx == 0)
       // std::cout << "freqSlopeX = " << to_string(freqSlopeX) << '\n';
 
-      vec2 freqSlopeZ;
-      freqSlopeZ.x = -k.z * freqHeight.y;
-      freqSlopeZ.y = k.z * freqHeight.x;
+      // vec2 freqSlopeZ;
+      // freqSlopeZ.x = -k.z * freqHeight.y;
+      // freqSlopeZ.y = k.z * freqHeight.x;
 
       // if (testIdx == 0)
       // std::cout << "freqSlopeZ = " << to_string(freqSlopeZ) << '\n';
@@ -623,11 +623,11 @@ void step() {
       Complex cFreqHeight(freqHeight.x, freqHeight.y);
       heightFreqs[n][m] = cFreqHeight;
 
-      Complex cFreqSlopeX(freqSlopeX.x, freqSlopeX.y);
-      slopeFreqsX[n][m] = cFreqSlopeX;
-
-      Complex cFreqSlopeZ(freqSlopeZ.x, freqSlopeZ.y);
-      slopeFreqsZ[n][m] = cFreqSlopeZ;
+      // Complex cFreqSlopeX(freqSlopeX.x, freqSlopeX.y);
+      // slopeFreqsX[n][m] = cFreqSlopeX;
+      //
+      // Complex cFreqSlopeZ(freqSlopeZ.x, freqSlopeZ.y);
+      // slopeFreqsZ[n][m] = cFreqSlopeZ;
 
       Complex cFreqDisplaceX(freqDisplaceX.x, freqDisplaceX.y);
       displaceFreqsX[n][m] = cFreqDisplaceX;
@@ -639,8 +639,8 @@ void step() {
 
   // perform IFFT
   fft.ifft2(heightFreqs);
-  fft.ifft2(slopeFreqsX);
-  fft.ifft2(slopeFreqsZ);
+  // fft.ifft2(slopeFreqsX);
+  // fft.ifft2(slopeFreqsZ);
   fft.ifft2(displaceFreqsX);
   fft.ifft2(displaceFreqsZ);
 
@@ -653,20 +653,20 @@ void step() {
       vWaterVtxs[idx].y = heightFreqs[n][m].real();
 
       // normal
-      vec3 slope;
-      slope.x = slopeFreqsX[n][m].real();
-      slope.y = 0;
-      slope.z = slopeFreqsZ[n][m].real();
+      // vec3 slope;
+      // slope.x = slopeFreqsX[n][m].real();
+      // slope.y = 0;
+      // slope.z = slopeFreqsZ[n][m].real();
 
       // if (idx == 0)
       //   std::cout << "slope vector: " << to_string(slope) << '\n';
 
-      vec3 normal = vec3(0, 1, 0) - slope;
-      normal = glm::normalize(normal);
+      // vec3 normal = vec3(0, 1, 0) - slope;
+      // normal = glm::normalize(normal);
 
       // std::cout << to_string(normal) << '\n';
 
-      vWaterNs[idx] = normal;
+      // vWaterNs[idx] = normal;
 
       // std::cout << "use slope: " << to_string(normal) << '\n';
 
@@ -674,7 +674,7 @@ void step() {
       // std::cout << "displaceFreqsZ: " << displaceFreqsZ[n][m].real() << '\n';
 
       // horizontal displacement
-      float scale = 0.75f;
+      float scale = 0.5f;
       vWaterVtxs[idx].x =
           vWaterVtxsOri[idx].x + displaceFreqsX[n][m].real() * scale;
       vWaterVtxs[idx].z =
@@ -701,9 +701,14 @@ void step() {
         idx2 = idx0 - 1;
       }
       // row border
-      else {
+      else if (n == N - 1 && m < M - 1) {
         idx1 = idx0 - M;
         idx2 = idx0 + 1;
+      }
+      // the corner one
+      else {
+        idx1 = idx0 - 1;
+        idx2 = idx0 - M;
       }
 
       vec3 edge0 = vWaterVtxs[idx1] - vWaterVtxs[idx0];
