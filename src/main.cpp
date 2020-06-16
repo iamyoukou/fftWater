@@ -69,8 +69,9 @@ float A = 0.1f; // constant in Phillips Spectrum
 float G = 9.8f;
 float t = 0.f;
 float dt = 0.01f;
-vector<vec3> vtxs, oriVtxs;
+vector<vec3> vtxs;
 GLfloat *aWaterVtxs, *aWaterNs;
+int nOfQuads;
 
 Array2D3v waterPos;
 Array2D3v waterN;
@@ -113,6 +114,7 @@ void initSkybox();
 void initUniform();
 void initWater();
 void release();
+void createWaterGeometry();
 
 void step();
 float gaussianRandom(float, float);
@@ -490,94 +492,27 @@ void initWater() {
   Lx = cellSize * (N - 1);
   Lz = Lx;
 
-  // test
-  for (size_t i = 0; i < N; i++) {
-    for (size_t j = 0; j < M; j++) {
-      vec3 vtx = vec3(i * cellSize, 0.f, j * cellSize);
-
-      vtxs.push_back(vtx);
-      oriVtxs.push_back(vtx);
-    }
-  }
-
-  // for (size_t i = 0; i < vtxs.size(); i++) {
-  //   std::cout << to_string(vtxs[i]) << '\n';
-  // }
-
-  // implant vertex position
-  int nOfQuads = (N - 1) * (M - 1);
+  /* for water geometry description */
+  nOfQuads = (N - 1) * (M - 1);
 
   // 2 triangles per quad
   aWaterVtxs = new GLfloat[nOfQuads * 2 * 3 * 3];
   aWaterNs = new GLfloat[nOfQuads * 2 * 3 * 3];
 
-  // index for aWaterVtxs
-  int idxQuad = 0;
+  // create water geometry position data
+  for (size_t i = 0; i < N; i++) {
+    for (size_t j = 0; j < M; j++) {
+      vec3 vtx = vec3(i * cellSize, 0.f, j * cellSize);
 
-  for (size_t i = 0; i < N - 1; i++) {
-    for (size_t j = 0; j < M - 1; j++) {
-      int idx0 = i * N + j;
-      int idx1 = idx0 + 1;
-      int idx2 = idx1 + M;
-      int idx3 = idx2 - 1;
-
-      // the first triangle in a quad
-      // vertex position
-      aWaterVtxs[idxQuad * 18 + 0] = vtxs[idx0].x;
-      aWaterVtxs[idxQuad * 18 + 1] = vtxs[idx0].y;
-      aWaterVtxs[idxQuad * 18 + 2] = vtxs[idx0].z;
-
-      aWaterVtxs[idxQuad * 18 + 3] = vtxs[idx1].x;
-      aWaterVtxs[idxQuad * 18 + 4] = vtxs[idx1].y;
-      aWaterVtxs[idxQuad * 18 + 5] = vtxs[idx1].z;
-
-      aWaterVtxs[idxQuad * 18 + 6] = vtxs[idx2].x;
-      aWaterVtxs[idxQuad * 18 + 7] = vtxs[idx2].y;
-      aWaterVtxs[idxQuad * 18 + 8] = vtxs[idx2].z;
-
-      // vertex normal
-      aWaterNs[idxQuad * 18 + 0] = 0;
-      aWaterNs[idxQuad * 18 + 1] = 1;
-      aWaterNs[idxQuad * 18 + 2] = 0;
-
-      aWaterNs[idxQuad * 18 + 3] = 0;
-      aWaterNs[idxQuad * 18 + 4] = 1;
-      aWaterNs[idxQuad * 18 + 5] = 0;
-
-      aWaterNs[idxQuad * 18 + 6] = 0;
-      aWaterNs[idxQuad * 18 + 7] = 1;
-      aWaterNs[idxQuad * 18 + 8] = 0;
-
-      // the second triangle in a quad
-      // vertex position
-      aWaterVtxs[idxQuad * 18 + 9] = vtxs[idx0].x;
-      aWaterVtxs[idxQuad * 18 + 10] = vtxs[idx0].y;
-      aWaterVtxs[idxQuad * 18 + 11] = vtxs[idx0].z;
-
-      aWaterVtxs[idxQuad * 18 + 12] = vtxs[idx2].x;
-      aWaterVtxs[idxQuad * 18 + 13] = vtxs[idx2].y;
-      aWaterVtxs[idxQuad * 18 + 14] = vtxs[idx2].z;
-
-      aWaterVtxs[idxQuad * 18 + 15] = vtxs[idx3].x;
-      aWaterVtxs[idxQuad * 18 + 16] = vtxs[idx3].y;
-      aWaterVtxs[idxQuad * 18 + 17] = vtxs[idx3].z;
-
-      // vertex normal
-      aWaterNs[idxQuad * 18 + 9] = 0;
-      aWaterNs[idxQuad * 18 + 10] = 1;
-      aWaterNs[idxQuad * 18 + 11] = 0;
-
-      aWaterNs[idxQuad * 18 + 12] = 0;
-      aWaterNs[idxQuad * 18 + 13] = 1;
-      aWaterNs[idxQuad * 18 + 14] = 0;
-
-      aWaterNs[idxQuad * 18 + 15] = 0;
-      aWaterNs[idxQuad * 18 + 16] = 1;
-      aWaterNs[idxQuad * 18 + 17] = 0;
-
-      idxQuad++;
+      vtxs.push_back(vtx);
     }
   }
+
+  createWaterGeometry();
+
+  // for (size_t i = 0; i < vtxs.size(); i++) {
+  //   std::cout << to_string(vtxs[i]) << '\n';
+  // }
 
   // for (size_t i = 0; i < nOfQuads * 2; i++) {
   //   cout << "(" << aWaterNs[i * 9 + 0] << ", " << aWaterNs[i * 9 + 1] << ", "
@@ -695,6 +630,7 @@ void step() {
   // vector<vec3> vtxNs;
 
   /* update geometry */
+  // N rows, M columns
   for (size_t n = 0; n < N; n++) {
     for (size_t m = 0; m < M; m++) {
       // height
@@ -893,4 +829,75 @@ void release() {
 
   delete[] aWaterVtxs;
   delete[] aWaterNs;
+}
+
+void createWaterGeometry() {
+
+  // geometry discription for opengl
+  int idxQuad = 0;
+
+  for (size_t i = 0; i < N - 1; i++) {
+    for (size_t j = 0; j < M - 1; j++) {
+      int idx0 = i * N + j;
+      int idx1 = idx0 + 1;
+      int idx2 = idx1 + M;
+      int idx3 = idx2 - 1;
+
+      // the first triangle in a quad
+      // vertex position
+      aWaterVtxs[idxQuad * 18 + 0] = vtxs[idx0].x;
+      aWaterVtxs[idxQuad * 18 + 1] = vtxs[idx0].y;
+      aWaterVtxs[idxQuad * 18 + 2] = vtxs[idx0].z;
+
+      aWaterVtxs[idxQuad * 18 + 3] = vtxs[idx1].x;
+      aWaterVtxs[idxQuad * 18 + 4] = vtxs[idx1].y;
+      aWaterVtxs[idxQuad * 18 + 5] = vtxs[idx1].z;
+
+      aWaterVtxs[idxQuad * 18 + 6] = vtxs[idx2].x;
+      aWaterVtxs[idxQuad * 18 + 7] = vtxs[idx2].y;
+      aWaterVtxs[idxQuad * 18 + 8] = vtxs[idx2].z;
+
+      // vertex normal
+      aWaterNs[idxQuad * 18 + 0] = 0;
+      aWaterNs[idxQuad * 18 + 1] = 1;
+      aWaterNs[idxQuad * 18 + 2] = 0;
+
+      aWaterNs[idxQuad * 18 + 3] = 0;
+      aWaterNs[idxQuad * 18 + 4] = 1;
+      aWaterNs[idxQuad * 18 + 5] = 0;
+
+      aWaterNs[idxQuad * 18 + 6] = 0;
+      aWaterNs[idxQuad * 18 + 7] = 1;
+      aWaterNs[idxQuad * 18 + 8] = 0;
+
+      // the second triangle in a quad
+      // vertex position
+      aWaterVtxs[idxQuad * 18 + 9] = vtxs[idx0].x;
+      aWaterVtxs[idxQuad * 18 + 10] = vtxs[idx0].y;
+      aWaterVtxs[idxQuad * 18 + 11] = vtxs[idx0].z;
+
+      aWaterVtxs[idxQuad * 18 + 12] = vtxs[idx2].x;
+      aWaterVtxs[idxQuad * 18 + 13] = vtxs[idx2].y;
+      aWaterVtxs[idxQuad * 18 + 14] = vtxs[idx2].z;
+
+      aWaterVtxs[idxQuad * 18 + 15] = vtxs[idx3].x;
+      aWaterVtxs[idxQuad * 18 + 16] = vtxs[idx3].y;
+      aWaterVtxs[idxQuad * 18 + 17] = vtxs[idx3].z;
+
+      // vertex normal
+      aWaterNs[idxQuad * 18 + 9] = 0;
+      aWaterNs[idxQuad * 18 + 10] = 1;
+      aWaterNs[idxQuad * 18 + 11] = 0;
+
+      aWaterNs[idxQuad * 18 + 12] = 0;
+      aWaterNs[idxQuad * 18 + 13] = 1;
+      aWaterNs[idxQuad * 18 + 14] = 0;
+
+      aWaterNs[idxQuad * 18 + 15] = 0;
+      aWaterNs[idxQuad * 18 + 16] = 1;
+      aWaterNs[idxQuad * 18 + 17] = 0;
+
+      idxQuad++;
+    }
+  }
 }
