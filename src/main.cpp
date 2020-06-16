@@ -7,14 +7,14 @@ typedef vector<vector<vec4>> Array2D4v;
 
 GLFWwindow *window;
 
-float verticalAngle = -2.02913;
-float horizontalAngle = 1.59961;
+float verticalAngle = -1.95411;
+float horizontalAngle = 3.14729;
 float initialFoV = 45.0f;
 float speed = 5.0f;
 float mouseSpeed = 0.005f;
 float farPlane = 2000.f;
 
-vec3 eyePoint = vec3(3.490209, 2.592932, 6.379744);
+vec3 eyePoint = vec3(-35.364811, 30.604717, 27.372036);
 vec3 eyeDirection =
     vec3(sin(verticalAngle) * cos(horizontalAngle), cos(verticalAngle),
          sin(verticalAngle) * sin(horizontalAngle));
@@ -65,7 +65,7 @@ int N, M;
 float cellSize;
 float Lx, Lz;
 vec3 wind = vec3(10.f, 0, 5.f);
-float A = 0.005f; // constant in Phillips Spectrum
+float A = 0.0001f; // constant in Phillips Spectrum
 float G = 9.8f;
 float t = 0.f;
 float dt = 0.01f;
@@ -73,7 +73,7 @@ vector<vec3> vWaterVtxsOri, vWaterVtxs, vWaterNs;
 GLfloat *aWaterVtxs, *aWaterNs;
 int nOfQuads;
 float omega0;
-float T0 = 50.f; // huge effect
+float T0 = 500.f; // huge effect
 
 Array2D3v waterPos;
 Array2D3v waterN;
@@ -118,7 +118,7 @@ void computeWaterGeometry();
 void updateWaterGeometry();
 
 void step();
-float gaussianRandom(float, float);
+vec2 gaussianRandom(float, float);
 vec4 h0(vec3);
 
 int main(int argc, char **argv) {
@@ -481,7 +481,7 @@ void initWater() {
   // initialize parameters
   // change these parameters if water.obj changes
   // N rows, M columns
-  N = 16;
+  N = 64;
   M = N;
   cellSize = 1.f;
   Lx = cellSize * (N - 1);
@@ -782,29 +782,17 @@ void step() {
 
 /* Gaussian random number generator */
 // mean m, standard deviation s
-float gaussianRandom(float m, float s) {
+vec2 gaussianRandom(float m, float s) {
   float x1, x2, w, y1;
-  static float y2;
-  static int use_last = 0;
+  do {
+    x1 = 2.0 * randf() - 1.0; // randf() is uniform in 0..1
+    x2 = 2.0 * randf() - 1.0;
+    w = x1 * x1 + x2 * x2;
+  } while (w >= 1.0);
 
-  if (use_last) /* use value from previous call */
-  {
-    y1 = y2;
-    use_last = 0;
-  } else {
-    do {
-      x1 = 2.0 * randf() - 1.0; // randf() is uniform in 0..1
-      x2 = 2.0 * randf() - 1.0;
-      w = x1 * x1 + x2 * x2;
-    } while (w >= 1.0);
+  w = sqrt((-2.0 * log(w)) / w);
 
-    w = sqrt((-2.0 * log(w)) / w);
-    y1 = x1 * w;
-    y2 = x2 * w;
-    use_last = 1;
-  }
-
-  return (m + y1 * s);
+  return vec2(x1 * w, x2 * w);
 }
 
 // (Eq.23) Given a wavevector k
@@ -818,15 +806,23 @@ vec2 phillipsSpectrum(vec3 k) {
   if (kLen < 0.00001f)
     return vec2(0, 0);
 
+  float kLen2 = kLen * kLen;
+  float kLen4 = kLen2 * kLen2;
+
   vec3 kDir = glm::normalize(k);
 
   float V = glm::length(wind);
   vec3 windDir = glm::normalize(wind);
 
   float L = V * V / G;
+  float L2 = L * L;
 
-  float commonTerm = A * exp(-1.f / (kLen * kLen * L * L));
-  commonTerm /= (kLen * kLen * kLen * kLen);
+  float damping = 0.001f;
+  float l2 = L2 * damping * damping;
+
+  float commonTerm = A * exp(-1.f / (kLen2 * L2));
+  commonTerm /= (kLen4);
+  commonTerm *= exp(-kLen2 * l2);
 
   vec2 kw = vec2(dot(kDir, windDir), dot(-kDir, windDir));
   kw = vec2(kw.x * kw.x, kw.y * kw.y);
@@ -839,9 +835,10 @@ vec2 phillipsSpectrum(vec3 k) {
 // vec4.xy represent the real and imag part of h0(k)
 // vec4.zw represent the real and imag part of {h0(-k)}*
 vec4 h0(vec3 k) {
-  vec2 gaus = vec2(gaussianRandom(0.f, 1.f), gaussianRandom(0.f, 1.f));
-  // vec2 gausConj = vec2(gaus.x, -gaus.y);
-  vec2 gausConj = vec2(gaussianRandom(0.f, 1.f), -gaussianRandom(0.f, 1.f));
+  vec2 gaus = gaussianRandom(0.f, 1.f);
+
+  vec2 gausConj = gaussianRandom(0.f, 1.f);
+  gausConj.y = -gausConj.y;
 
   vec2 philSpec = phillipsSpectrum(k);
   // std::cout << "philSpec = " << to_string(philSpec) << '\n';
