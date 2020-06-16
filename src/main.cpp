@@ -20,7 +20,7 @@ vec3 eyeDirection =
          sin(verticalAngle) * sin(horizontalAngle));
 vec3 up = vec3(0.f, 1.f, 0.f);
 
-vec3 lightPos = vec3(3.f, 3.f, 3.f);
+vec3 lightPos = vec3(0.f, 10.f, 0.f);
 vec3 lightColor = vec3(1.f, 1.f, 1.f);
 float lightPower = 12.f;
 
@@ -64,14 +64,16 @@ GLfloat vtxsSkybox[] = {
 int N, M;
 float cellSize;
 float Lx, Lz;
-vec3 wind = vec3(15.f, 0, -15.f);
+vec3 wind = vec3(10.f, 0, 5.f);
 float A = 0.01f; // constant in Phillips Spectrum
 float G = 9.8f;
 float t = 0.f;
 float dt = 0.01f;
-vector<vec3> vWaterVtxs, vWaterNs;
+vector<vec3> vWaterVtxsOri, vWaterVtxs, vWaterNs;
 GLfloat *aWaterVtxs, *aWaterNs;
 int nOfQuads;
+float omega0;
+float T0 = 2.f;
 
 Array2D3v waterPos;
 Array2D3v waterN;
@@ -155,11 +157,13 @@ int main(int argc, char **argv) {
     computeMatricesFromInputs();
 
     // draw skybox
+    // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glUseProgram(shaderSkybox);
     glBindVertexArray(vaoSkybox);
     glDrawArrays(GL_TRIANGLES, 0, 36);
 
     // draw water
+    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glUseProgram(shaderWater);
     glBindVertexArray(vaoWater);
     glDrawArrays(GL_TRIANGLES, 0, nOfQuads * 2 * 3);
@@ -482,6 +486,7 @@ void initWater() {
   cellSize = 1.f;
   Lx = cellSize * (N - 1);
   Lz = Lx;
+  omega0 = 2.f * PI / T0;
 
   /* for water geometry description */
   nOfQuads = (N - 1) * (M - 1);
@@ -496,6 +501,7 @@ void initWater() {
       vec3 vtx = vec3(i * cellSize, 0.f, j * cellSize);
       vec3 n = vec3(0, 1, 0);
 
+      vWaterVtxsOri.push_back(vtx);
       vWaterVtxs.push_back(vtx);
       vWaterNs.push_back(n);
     }
@@ -562,11 +568,22 @@ void step() {
   CArray2D slopeFreqsX(CArray(M), N);
   CArray2D slopeFreqsZ(CArray(M), N);
 
+  // horizontal displacement
+  CArray2D displaceFreqsX(CArray(M), N);
+  CArray2D displaceFreqsZ(CArray(M), N);
+
   for (size_t n = 0; n < N; n++) {
     for (size_t m = 0; m < M; m++) {
       int testIdx = n * M + m;
 
       vec3 k(2.f * PI * n / Lx, 0, 2.f * PI * m / Lz);
+
+      vec3 normK;
+      if (length(k) < 0.0001f)
+        normK = vec3(0, 0, 0);
+      else
+        normK = normalize(k);
+
       // std::cout << "k = " << to_string(k) << '\n';
 
       vec2 freqHeight = freqForHeight(k, n, m);
@@ -590,6 +607,18 @@ void step() {
       // std::cout << "freqSlopeZ = " << to_string(freqSlopeZ) << '\n';
       // std::cout << '\n';
 
+      vec2 freqDisplaceX;
+      freqDisplaceX.x = normK.x * freqHeight.y;
+      freqDisplaceX.y = -normK.x * freqHeight.x;
+
+      // std::cout << "freqDisplaceX: " << to_string(freqDisplaceX) << '\n';
+
+      vec2 freqDisplaceZ;
+      freqDisplaceZ.x = normK.z * freqHeight.y;
+      freqDisplaceZ.y = -normK.z * freqHeight.x;
+
+      // std::cout << "freqDisplaceZ: " << to_string(freqDisplaceZ) << '\n';
+
       // to use FFT, need to change from vec2 to Complex
       Complex cFreqHeight(freqHeight.x, freqHeight.y);
       heightFreqs[n][m] = cFreqHeight;
@@ -599,6 +628,12 @@ void step() {
 
       Complex cFreqSlopeZ(freqSlopeZ.x, freqSlopeZ.y);
       slopeFreqsZ[n][m] = cFreqSlopeZ;
+
+      Complex cFreqDisplaceX(freqDisplaceX.x, freqDisplaceX.y);
+      displaceFreqsX[n][m] = cFreqDisplaceX;
+
+      Complex cFreqDisplaceZ(freqDisplaceZ.x, freqDisplaceZ.y);
+      displaceFreqsZ[n][m] = cFreqDisplaceZ;
     }
   }
 
@@ -606,6 +641,8 @@ void step() {
   fft.ifft2(heightFreqs);
   fft.ifft2(slopeFreqsX);
   fft.ifft2(slopeFreqsZ);
+  fft.ifft2(displaceFreqsX);
+  fft.ifft2(displaceFreqsZ);
 
   // update geometry
   // N rows, M columns
@@ -632,6 +669,16 @@ void step() {
       vWaterNs[idx] = normal;
 
       // std::cout << "use slope: " << to_string(normal) << '\n';
+
+      // std::cout << "displaceFreqsX: " << displaceFreqsX[n][m].real() << '\n';
+      // std::cout << "displaceFreqsZ: " << displaceFreqsZ[n][m].real() << '\n';
+
+      // horizontal displacement
+      float scale = 0.75f;
+      vWaterVtxs[idx].x =
+          vWaterVtxsOri[idx].x + displaceFreqsX[n][m].real() * scale;
+      vWaterVtxs[idx].z =
+          vWaterVtxsOri[idx].z + displaceFreqsZ[n][m].real() * scale;
     }
   }
 
@@ -788,7 +835,8 @@ vec2 phillipsSpectrum(vec3 k) {
 // vec4.zw represent the real and imag part of {h0(-k)}*
 vec4 h0(vec3 k) {
   vec2 gaus = vec2(gaussianRandom(0.f, 1.f), gaussianRandom(0.f, 1.f));
-  vec2 gausConj = vec2(gaus.x, -gaus.y);
+  // vec2 gausConj = vec2(gaus.x, -gaus.y);
+  vec2 gausConj = vec2(gaussianRandom(0.f, 1.f), -gaussianRandom(0.f, 1.f));
 
   vec2 philSpec = phillipsSpectrum(k);
   // std::cout << "philSpec = " << to_string(philSpec) << '\n';
@@ -840,7 +888,13 @@ vec2 freqForHeight(vec3 k, int n, int m) {
 }
 
 // (Eq.14) Dispersion relation
-float dispersion(vec3 k) { return sqrt(glm::length(k) * G); }
+float dispersion(vec3 k) {
+  float omega = sqrt(glm::length(k) * G);
+
+  omega = floor(omega / omega0) * omega0;
+
+  return omega;
+}
 
 void release() {
   glfwTerminate();

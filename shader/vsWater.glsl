@@ -15,6 +15,7 @@ void main(){
     gl_Position = P * V * M * vec4( vtxPos, 1.0 );
 
     lightDir = (M * vec4(lightPos - vtxPos, 1.0)).xyz;
+    lightDir = vec3(1, 1, 1);
     lightDir = normalize(lightDir);
 
     // eyePoint is already in world space, so no need to multiply M

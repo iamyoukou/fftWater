@@ -8,5 +8,5 @@ out vec4 outputColor;
 void main(){
     vec3 baseColor = vec3(0, 0, 1);
 
-    outputColor = vec4(baseColor * dot(n, lightDir), 1.0);
+    outputColor = vec4(baseColor * clamp(dot(n, lightDir), 0.05, 0.95), 1.0);
 }
