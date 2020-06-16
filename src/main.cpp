@@ -69,7 +69,7 @@ float A = 0.1f; // constant in Phillips Spectrum
 float G = 9.8f;
 float t = 0.f;
 float dt = 0.01f;
-vector<vec3> vtxs;
+vector<vec3> vWaterVtxs;
 GLfloat *aWaterVtxs, *aWaterNs;
 int nOfQuads;
 
@@ -90,7 +90,7 @@ GLint vsWater, fsWater;
 mat4 waterM, waterV, waterP;
 GLuint shaderWater;
 
-Mesh mesh;
+// Mesh mesh;
 
 /* Other */
 GLuint vboSkybox, tboSkybox, vaoSkybox;
@@ -114,7 +114,7 @@ void initSkybox();
 void initUniform();
 void initWater();
 void release();
-void createWaterGeometry();
+void computeWaterGeometry();
 
 void step();
 float gaussianRandom(float, float);
@@ -150,7 +150,7 @@ int main(int argc, char **argv) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // update water
-    // step();
+    step();
 
     // view control
     computeMatricesFromInputs();
@@ -165,7 +165,6 @@ int main(int argc, char **argv) {
     // glBindVertexArray(mesh.vao);
     // glDrawArrays(GL_TRIANGLES, 0, mesh.faces.size() * 3);
     // drawPoints(vtxs);
-    int nOfQuads = (N - 1) * (M - 1);
     glUseProgram(shaderWater);
     glBindVertexArray(vaoWater);
     glDrawArrays(GL_TRIANGLES, 0, nOfQuads * 2 * 3);
@@ -504,11 +503,11 @@ void initWater() {
     for (size_t j = 0; j < M; j++) {
       vec3 vtx = vec3(i * cellSize, 0.f, j * cellSize);
 
-      vtxs.push_back(vtx);
+      vWaterVtxs.push_back(vtx);
     }
   }
 
-  createWaterGeometry();
+  computeWaterGeometry();
 
   // for (size_t i = 0; i < vtxs.size(); i++) {
   //   std::cout << to_string(vtxs[i]) << '\n';
@@ -574,12 +573,6 @@ float randf() {
 
 void step() {
   /* update geometry */
-  // for (size_t i = 0; i < mesh.vertices.size(); i++) {
-  //   vec3 &vtx = mesh.vertices[i];
-  //
-  //   vtx.y += randf() * 0.01f;
-  // }
-
   // height
   CArray2D heightFreqs(CArray(M), N);
 
@@ -625,19 +618,16 @@ void step() {
   // fft.ifft2(slopeFreqsX);
   // fft.ifft2(slopeFreqsZ);
 
-  // as the grid exported from Blender only has one vn
-  // we need to build a std::vector to temporarily store vertex normals
-  // vector<vec3> vtxNs;
-
-  /* update geometry */
+  // update geometry
   // N rows, M columns
   for (size_t n = 0; n < N; n++) {
     for (size_t m = 0; m < M; m++) {
       // height
       int idx = n * N + m;
-      vec3 &vtx = mesh.vertices[idx];
+      // vec3 &vtx = mesh.vertices[idx];
+      vWaterVtxs[idx].y = heightFreqs[n][m].real();
 
-      vtx.y = heightFreqs[n][m].real();
+      // vtx.y = heightFreqs[n][m].real();
 
       // normal
       // vec3 slope;
@@ -659,32 +649,54 @@ void step() {
   t += dt;
 
   /* update buffer objects */
-  int nOfFaces = mesh.faces.size();
+  computeWaterGeometry();
 
-  glBindVertexArray(mesh.vao);
+  glBindVertexArray(vaoWater);
 
-  // position
-  glBindBuffer(GL_ARRAY_BUFFER, mesh.vboVtxs);
+  // vbo for vertex position
+  glBindBuffer(GL_ARRAY_BUFFER, vboWaterVtx);
   // buffer orphaning
-  glBufferData(GL_ARRAY_BUFFER, nOfFaces * 3 * 3 * sizeof(GLfloat), NULL,
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * nOfQuads * 2 * 3 * 3, NULL,
                GL_STREAM_DRAW);
+  // write data
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * nOfQuads * 2 * 3 * 3,
+               aWaterVtxs, GL_STREAM_DRAW);
 
-  for (size_t i = 0; i < nOfFaces; i++) {
-    int vtxIdx = mesh.faces[i].v1;
-    vec3 vtx = mesh.vertices[vtxIdx];
-    glBufferSubData(GL_ARRAY_BUFFER, sizeof(GLfloat) * (i * 9 + 0),
-                    sizeof(GLfloat) * 3, &vtx);
+  // vbo for vertex normal
+  glBindBuffer(GL_ARRAY_BUFFER, vboWaterN);
+  // buffer orphaning
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * nOfQuads * 2 * 3 * 3, NULL,
+               GL_STREAM_DRAW);
+  // write data
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * nOfQuads * 2 * 3 * 3,
+               aWaterNs, GL_STREAM_DRAW);
 
-    vtxIdx = mesh.faces[i].v2;
-    vtx = mesh.vertices[vtxIdx];
-    glBufferSubData(GL_ARRAY_BUFFER, sizeof(GLfloat) * (i * 9 + 3),
-                    sizeof(GLfloat) * 3, &vtx);
-
-    vtxIdx = mesh.faces[i].v3;
-    vtx = mesh.vertices[vtxIdx];
-    glBufferSubData(GL_ARRAY_BUFFER, sizeof(GLfloat) * (i * 9 + 6),
-                    sizeof(GLfloat) * 3, &vtx);
-  }
+  // int nOfFaces = mesh.faces.size();
+  //
+  // glBindVertexArray(mesh.vao);
+  //
+  // // position
+  // glBindBuffer(GL_ARRAY_BUFFER, mesh.vboVtxs);
+  // // buffer orphaning
+  // glBufferData(GL_ARRAY_BUFFER, nOfFaces * 3 * 3 * sizeof(GLfloat), NULL,
+  //              GL_STREAM_DRAW);
+  //
+  // for (size_t i = 0; i < nOfFaces; i++) {
+  //   int vtxIdx = mesh.faces[i].v1;
+  //   vec3 vtx = mesh.vertices[vtxIdx];
+  //   glBufferSubData(GL_ARRAY_BUFFER, sizeof(GLfloat) * (i * 9 + 0),
+  //                   sizeof(GLfloat) * 3, &vtx);
+  //
+  //   vtxIdx = mesh.faces[i].v2;
+  //   vtx = mesh.vertices[vtxIdx];
+  //   glBufferSubData(GL_ARRAY_BUFFER, sizeof(GLfloat) * (i * 9 + 3),
+  //                   sizeof(GLfloat) * 3, &vtx);
+  //
+  //   vtxIdx = mesh.faces[i].v3;
+  //   vtx = mesh.vertices[vtxIdx];
+  //   glBufferSubData(GL_ARRAY_BUFFER, sizeof(GLfloat) * (i * 9 + 6),
+  //                   sizeof(GLfloat) * 3, &vtx);
+  // }
 
   // // normal
   // glBindBuffer(GL_ARRAY_BUFFER, mesh.vboNormals);
@@ -831,7 +843,7 @@ void release() {
   delete[] aWaterNs;
 }
 
-void createWaterGeometry() {
+void computeWaterGeometry() {
 
   // geometry discription for opengl
   int idxQuad = 0;
@@ -845,17 +857,17 @@ void createWaterGeometry() {
 
       // the first triangle in a quad
       // vertex position
-      aWaterVtxs[idxQuad * 18 + 0] = vtxs[idx0].x;
-      aWaterVtxs[idxQuad * 18 + 1] = vtxs[idx0].y;
-      aWaterVtxs[idxQuad * 18 + 2] = vtxs[idx0].z;
+      aWaterVtxs[idxQuad * 18 + 0] = vWaterVtxs[idx0].x;
+      aWaterVtxs[idxQuad * 18 + 1] = vWaterVtxs[idx0].y;
+      aWaterVtxs[idxQuad * 18 + 2] = vWaterVtxs[idx0].z;
 
-      aWaterVtxs[idxQuad * 18 + 3] = vtxs[idx1].x;
-      aWaterVtxs[idxQuad * 18 + 4] = vtxs[idx1].y;
-      aWaterVtxs[idxQuad * 18 + 5] = vtxs[idx1].z;
+      aWaterVtxs[idxQuad * 18 + 3] = vWaterVtxs[idx1].x;
+      aWaterVtxs[idxQuad * 18 + 4] = vWaterVtxs[idx1].y;
+      aWaterVtxs[idxQuad * 18 + 5] = vWaterVtxs[idx1].z;
 
-      aWaterVtxs[idxQuad * 18 + 6] = vtxs[idx2].x;
-      aWaterVtxs[idxQuad * 18 + 7] = vtxs[idx2].y;
-      aWaterVtxs[idxQuad * 18 + 8] = vtxs[idx2].z;
+      aWaterVtxs[idxQuad * 18 + 6] = vWaterVtxs[idx2].x;
+      aWaterVtxs[idxQuad * 18 + 7] = vWaterVtxs[idx2].y;
+      aWaterVtxs[idxQuad * 18 + 8] = vWaterVtxs[idx2].z;
 
       // vertex normal
       aWaterNs[idxQuad * 18 + 0] = 0;
@@ -872,17 +884,17 @@ void createWaterGeometry() {
 
       // the second triangle in a quad
       // vertex position
-      aWaterVtxs[idxQuad * 18 + 9] = vtxs[idx0].x;
-      aWaterVtxs[idxQuad * 18 + 10] = vtxs[idx0].y;
-      aWaterVtxs[idxQuad * 18 + 11] = vtxs[idx0].z;
+      aWaterVtxs[idxQuad * 18 + 9] = vWaterVtxs[idx0].x;
+      aWaterVtxs[idxQuad * 18 + 10] = vWaterVtxs[idx0].y;
+      aWaterVtxs[idxQuad * 18 + 11] = vWaterVtxs[idx0].z;
 
-      aWaterVtxs[idxQuad * 18 + 12] = vtxs[idx2].x;
-      aWaterVtxs[idxQuad * 18 + 13] = vtxs[idx2].y;
-      aWaterVtxs[idxQuad * 18 + 14] = vtxs[idx2].z;
+      aWaterVtxs[idxQuad * 18 + 12] = vWaterVtxs[idx2].x;
+      aWaterVtxs[idxQuad * 18 + 13] = vWaterVtxs[idx2].y;
+      aWaterVtxs[idxQuad * 18 + 14] = vWaterVtxs[idx2].z;
 
-      aWaterVtxs[idxQuad * 18 + 15] = vtxs[idx3].x;
-      aWaterVtxs[idxQuad * 18 + 16] = vtxs[idx3].y;
-      aWaterVtxs[idxQuad * 18 + 17] = vtxs[idx3].z;
+      aWaterVtxs[idxQuad * 18 + 15] = vWaterVtxs[idx3].x;
+      aWaterVtxs[idxQuad * 18 + 16] = vWaterVtxs[idx3].y;
+      aWaterVtxs[idxQuad * 18 + 17] = vWaterVtxs[idx3].z;
 
       // vertex normal
       aWaterNs[idxQuad * 18 + 9] = 0;
