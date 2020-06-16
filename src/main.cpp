@@ -6,6 +6,7 @@ typedef vector<vector<float>> Array2D1f;
 typedef vector<vector<vec4>> Array2D4v;
 
 GLFWwindow *window;
+unsigned int frameNumber = 0;
 
 float verticalAngle = -1.95411;
 float horizontalAngle = 3.14729;
@@ -101,7 +102,7 @@ void computeMatricesFromInputs();
 void keyCallback(GLFWwindow *, int, int, int, int);
 float randf();
 float phillipsSpectrum(int, int);
-vec2 freqForHeight(vec3, int, int);
+Complex freqForHeight(int, int);
 float dispersion(int, int);
 
 void initGL();
@@ -169,6 +170,22 @@ int main(int argc, char **argv) {
     // glUseProgram(shaderWater);
     // glBindVertexArray(vaoWater);
     // glDrawArrays(GL_POINTS, 0, N * N);
+
+    // string dir = "./result/output";
+    // // zero padding
+    // // e.g. "output0001.bmp"
+    // string num = to_string(frameNumber);
+    // num = string(4 - num.length(), '0') + num;
+    // string output = dir + num + ".bmp";
+    //
+    // FIBITMAP *outputImage =
+    //     FreeImage_AllocateT(FIT_UINT32, WINDOW_WIDTH * 2, WINDOW_HEIGHT * 2);
+    // glReadPixels(0, 0, WINDOW_WIDTH * 2, WINDOW_HEIGHT * 2, GL_BGRA,
+    //              GL_UNSIGNED_INT_8_8_8_8_REV,
+    //              (GLvoid *)FreeImage_GetBits(outputImage));
+    // FreeImage_Save(FIF_BMP, outputImage, output.c_str(), 0);
+    // std::cout << output << " saved." << '\n';
+    // frameNumber++;
 
     // update frame
     glfwSwapBuffers(window);
@@ -571,66 +588,40 @@ void step() {
 
   for (size_t n = 0; n < N; n++) {
     for (size_t m = 0; m < M; m++) {
-      int testIdx = n * M + m;
-
       vec3 k(2.f * PI * n / Lx, 0, 2.f * PI * m / Lz);
 
-      vec3 normK;
+      vec3 kNorm;
       if (length(k) < 0.0001f)
-        normK = vec3(0, 0, 0);
+        kNorm = vec3(0, 0, 0);
       else
-        normK = normalize(k);
+        kNorm = normalize(k);
 
       // std::cout << "k = " << to_string(k) << '\n';
-
-      vec2 freqHeight = freqForHeight(k, n, m);
 
       // if (testIdx == 0)
       // std::cout << "freqHeight = " << to_string(freqHeight) << '\n';
 
-      // (a + bi)(c + di) = (ac - bd) + (ad + bc)i
-      // vec2 freqSlopeX;
-      // freqSlopeX.x = -k.x * freqHeight.y;
-      // freqSlopeX.y = k.x * freqHeight.x;
+      // Complex ikX(0, k.x);
+      // Complex ikZ(0, k.z);
 
       // if (testIdx == 0)
       // std::cout << "freqSlopeX = " << to_string(freqSlopeX) << '\n';
-
-      // vec2 freqSlopeZ;
-      // freqSlopeZ.x = -k.z * freqHeight.y;
-      // freqSlopeZ.y = k.z * freqHeight.x;
 
       // if (testIdx == 0)
       // std::cout << "freqSlopeZ = " << to_string(freqSlopeZ) << '\n';
       // std::cout << '\n';
 
-      vec2 freqDisplaceX;
-      freqDisplaceX.x = normK.x * freqHeight.y;
-      freqDisplaceX.y = -normK.x * freqHeight.x;
+      Complex ikNormX(0, -kNorm.x);
+      Complex ikNormZ(0, -kNorm.z);
 
       // std::cout << "freqDisplaceX: " << to_string(freqDisplaceX) << '\n';
-
-      vec2 freqDisplaceZ;
-      freqDisplaceZ.x = normK.z * freqHeight.y;
-      freqDisplaceZ.y = -normK.z * freqHeight.x;
-
       // std::cout << "freqDisplaceZ: " << to_string(freqDisplaceZ) << '\n';
 
-      // to use FFT, need to change from vec2 to Complex
-      Complex cFreqHeight(freqHeight.x, freqHeight.y);
-      heightFreqs[n][m] = cFreqHeight;
-
-      // Complex cFreqSlopeX(freqSlopeX.x, freqSlopeX.y);
-      // slopeFreqsX[n][m] = cFreqSlopeX;
-      //
-      // Complex cFreqSlopeZ(freqSlopeZ.x, freqSlopeZ.y);
-      // slopeFreqsZ[n][m] = cFreqSlopeZ;
-
-      Complex cFreqDisplaceX(freqDisplaceX.x, freqDisplaceX.y);
-      displaceFreqsX[n][m] = cFreqDisplaceX;
-
-      Complex cFreqDisplaceZ(freqDisplaceZ.x, freqDisplaceZ.y);
-      displaceFreqsZ[n][m] = cFreqDisplaceZ;
+      heightFreqs[n][m] = freqForHeight(n, m);
+      // slopeFreqsX[n][m] = ikX * heightFreqs[n][m];
+      // slopeFreqsZ[n][m] = ikZ * heightFreqs[n][m];
+      displaceFreqsX[n][m] = ikNormX * heightFreqs[n][m];
+      displaceFreqsZ[n][m] = ikNormZ * heightFreqs[n][m];
     }
   }
 
@@ -725,56 +716,6 @@ void step() {
   /* update buffer objects */
   computeWaterGeometry();
   updateWaterGeometry();
-
-  // int nOfFaces = mesh.faces.size();
-  //
-  // glBindVertexArray(mesh.vao);
-  //
-  // // position
-  // glBindBuffer(GL_ARRAY_BUFFER, mesh.vboVtxs);
-  // // buffer orphaning
-  // glBufferData(GL_ARRAY_BUFFER, nOfFaces * 3 * 3 * sizeof(GLfloat), NULL,
-  //              GL_STREAM_DRAW);
-  //
-  // for (size_t i = 0; i < nOfFaces; i++) {
-  //   int vtxIdx = mesh.faces[i].v1;
-  //   vec3 vtx = mesh.vertices[vtxIdx];
-  //   glBufferSubData(GL_ARRAY_BUFFER, sizeof(GLfloat) * (i * 9 + 0),
-  //                   sizeof(GLfloat) * 3, &vtx);
-  //
-  //   vtxIdx = mesh.faces[i].v2;
-  //   vtx = mesh.vertices[vtxIdx];
-  //   glBufferSubData(GL_ARRAY_BUFFER, sizeof(GLfloat) * (i * 9 + 3),
-  //                   sizeof(GLfloat) * 3, &vtx);
-  //
-  //   vtxIdx = mesh.faces[i].v3;
-  //   vtx = mesh.vertices[vtxIdx];
-  //   glBufferSubData(GL_ARRAY_BUFFER, sizeof(GLfloat) * (i * 9 + 6),
-  //                   sizeof(GLfloat) * 3, &vtx);
-  // }
-
-  // // normal
-  // glBindBuffer(GL_ARRAY_BUFFER, mesh.vboNormals);
-  // // buffer orphaning
-  // glBufferData(GL_ARRAY_BUFFER, vtxNs.size() * 3 * sizeof(GLfloat), NULL,
-  //              GL_STREAM_DRAW);
-  //
-  // for (size_t i = 0; i < nOfFaces; i++) {
-  //   int vtxIdx = mesh.faces[i].vn1;
-  //   vec3 vtxN = mesh.vertices[vtxIdx];
-  //   glBufferSubData(GL_ARRAY_BUFFER, sizeof(GLfloat) * (i * 9 + 0),
-  //                   sizeof(GLfloat) * 3, &vtx);
-  //
-  //   vtxIdx = mesh.faces[i].vn2;
-  //   vtx = mesh.vertices[vtxIdx];
-  //   glBufferSubData(GL_ARRAY_BUFFER, sizeof(GLfloat) * (i * 9 + 3),
-  //                   sizeof(GLfloat) * 3, &vtx);
-  //
-  //   vtxIdx = mesh.faces[i].vn3;
-  //   vtx = mesh.vertices[vtxIdx];
-  //   glBufferSubData(GL_ARRAY_BUFFER, sizeof(GLfloat) * (i * 9 + 6),
-  //                   sizeof(GLfloat) * 3, &vtx);
-  // }
 }
 
 /* Gaussian random number generator */
@@ -856,7 +797,7 @@ vec4 h0(int n, int m) {
 // so be careful to change the complex exponent term
 // into (a + ib) before multiplication
 // (a + bi)(c + di) = (ac - bd) + (ad + bc)i
-vec2 freqForHeight(vec3 k, int n, int m) {
+Complex freqForHeight(int n, int m) {
   // std::cout << "k = " << to_string(k) << '\n';
 
   // float omega = dispersion(k);
@@ -885,7 +826,7 @@ vec2 freqForHeight(vec3 k, int n, int m) {
   freqConj.x = h0Term.z * eTermConj.x - h0Term.w * eTermConj.y;
   freqConj.y = h0Term.z * eTermConj.y + h0Term.w * eTermConj.x;
 
-  return vec2(freq.x + freqConj.x, freq.y + freqConj.y);
+  return Complex(freq.x + freqConj.x, freq.y + freqConj.y);
 }
 
 // (Eq.14) Dispersion relation

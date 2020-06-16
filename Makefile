@@ -35,7 +35,10 @@ fft.o: $(SRC_DIR)/fft.cpp
 test.o:$(SRC_DIR)/test.cpp
 	$(CXX) -c $(INCS) $^ -o $@
 
-.PHONY: clean
+.PHONY: clean video
 
 clean:
-	rm -vf main ./result/*
+	rm -v ./result/*
+
+video:
+	ffmpeg -r 30 -start_number 0 -i ./result/output%04d.bmp -vcodec mpeg4 -b:v 30M -s 400x300 ./result.mp4

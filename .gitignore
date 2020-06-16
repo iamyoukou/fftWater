@@ -2,3 +2,5 @@
 fft
 main
 test
+result/
+*.mp4
