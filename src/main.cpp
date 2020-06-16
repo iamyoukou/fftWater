@@ -69,7 +69,7 @@ float A = 0.1f; // constant in Phillips Spectrum
 float G = 9.8f;
 float t = 0.f;
 float dt = 0.01f;
-vector<vec3> vWaterVtxs;
+vector<vec3> vWaterVtxs, vWaterNs;
 GLfloat *aWaterVtxs, *aWaterNs;
 int nOfQuads;
 
@@ -89,8 +89,6 @@ GLint uniDiffuse, uniAmbient, uniSpecular;
 GLint vsWater, fsWater;
 mat4 waterM, waterV, waterP;
 GLuint shaderWater;
-
-// Mesh mesh;
 
 /* Other */
 GLuint vboSkybox, tboSkybox, vaoSkybox;
@@ -161,11 +159,7 @@ int main(int argc, char **argv) {
     glBindVertexArray(vaoSkybox);
     glDrawArrays(GL_TRIANGLES, 0, 36);
 
-    // draw 3d models
-    // glUseProgram(shaderWater);
-    // glBindVertexArray(mesh.vao);
-    // glDrawArrays(GL_TRIANGLES, 0, mesh.faces.size() * 3);
-    // drawPoints(vtxs);
+    // draw water
     glUseProgram(shaderWater);
     glBindVertexArray(vaoWater);
     glDrawArrays(GL_TRIANGLES, 0, nOfQuads * 2 * 3);
@@ -503,8 +497,10 @@ void initWater() {
   for (size_t i = 0; i < N; i++) {
     for (size_t j = 0; j < M; j++) {
       vec3 vtx = vec3(i * cellSize, 0.f, j * cellSize);
+      vec3 n = vec3(0, 1, 0);
 
       vWaterVtxs.push_back(vtx);
+      vWaterNs.push_back(n);
     }
   }
 
@@ -578,8 +574,8 @@ void step() {
   CArray2D heightFreqs(CArray(M), N);
 
   // normal
-  // CArray2D slopeFreqsX(CArray(M), N);
-  // CArray2D slopeFreqsZ(CArray(M), N);
+  CArray2D slopeFreqsX(CArray(M), N);
+  CArray2D slopeFreqsZ(CArray(M), N);
 
   for (size_t n = 0; n < N; n++) {
     for (size_t m = 0; m < M; m++) {
@@ -590,14 +586,14 @@ void step() {
       // std::cout << "freqHeight = " << to_string(freqHeight) << '\n';
 
       // (a + bi)(c + di) = (ac - bd) + (ad + bc)i
-      // vec2 freqSlopeX;
-      // freqSlopeX.x = 0.f - k.x * freqHeight.y;
-      // freqSlopeX.y = 0.f + k.x * freqHeight.x;
-      // // std::cout << "freqSlopeX = " << to_string(freqSlopeX) << '\n';
-      //
-      // vec2 freqSlopeZ;
-      // freqSlopeZ.x = 0.f - k.z * freqHeight.y;
-      // freqSlopeZ.y = 0.f + k.z * freqHeight.x;
+      vec2 freqSlopeX;
+      freqSlopeX.x = 0.f - k.x * freqHeight.y;
+      freqSlopeX.y = 0.f + k.x * freqHeight.x;
+      // std::cout << "freqSlopeX = " << to_string(freqSlopeX) << '\n';
+
+      vec2 freqSlopeZ;
+      freqSlopeZ.x = 0.f - k.z * freqHeight.y;
+      freqSlopeZ.y = 0.f + k.z * freqHeight.x;
 
       // freqSlopeZ always equals to (0, 0) ?
       // std::cout << "freqSlopeZ = " << to_string(freqSlopeZ) << '\n';
@@ -606,18 +602,18 @@ void step() {
       Complex cFreqHeight(freqHeight.x, freqHeight.y);
       heightFreqs[n][m] = cFreqHeight;
 
-      // Complex cFreqSlopeX(freqSlopeX.x, freqSlopeX.y);
-      // slopeFreqsX[n][m] = cFreqSlopeX;
-      //
-      // Complex cFreqSlopeZ(freqSlopeZ.x, freqSlopeZ.y);
-      // slopeFreqsZ[n][m] = cFreqSlopeZ;
+      Complex cFreqSlopeX(freqSlopeX.x, freqSlopeX.y);
+      slopeFreqsX[n][m] = cFreqSlopeX;
+
+      Complex cFreqSlopeZ(freqSlopeZ.x, freqSlopeZ.y);
+      slopeFreqsZ[n][m] = cFreqSlopeZ;
     }
   }
 
   // perform IFFT
   fft.ifft2(heightFreqs);
-  // fft.ifft2(slopeFreqsX);
-  // fft.ifft2(slopeFreqsZ);
+  fft.ifft2(slopeFreqsX);
+  fft.ifft2(slopeFreqsZ);
 
   // update geometry
   // N rows, M columns
@@ -625,25 +621,22 @@ void step() {
     for (size_t m = 0; m < M; m++) {
       // height
       int idx = n * N + m;
-      // vec3 &vtx = mesh.vertices[idx];
       vWaterVtxs[idx].y = heightFreqs[n][m].real();
 
-      // vtx.y = heightFreqs[n][m].real();
-
       // normal
-      // vec3 slope;
-      // slope.x = slopeFreqsX[n][m].real();
-      // slope.y = 0;
-      // slope.z = slopeFreqsZ[n][m].real();
-      //
-      // // std::cout << to_string(slope) << '\n';
-      //
-      // vec3 normal = vec3(0, 1, 0) - slope;
-      // normal = glm::normalize(normal);
-      //
-      // // std::cout << to_string(normal) << '\n';
-      //
-      // vtxNs.push_back(normal);
+      vec3 slope;
+      slope.x = slopeFreqsX[n][m].real();
+      slope.y = 0;
+      slope.z = slopeFreqsZ[n][m].real();
+
+      // std::cout << to_string(slope) << '\n';
+
+      vec3 normal = vec3(0, 1, 0) - slope;
+      normal = glm::normalize(normal);
+
+      // std::cout << to_string(normal) << '\n';
+
+      vWaterNs[idx] = normal;
     }
   }
 
@@ -852,17 +845,17 @@ void computeWaterGeometry() {
       aWaterVtxs[idxQuad * 18 + 8] = vWaterVtxs[idx2].z;
 
       // vertex normal
-      aWaterNs[idxQuad * 18 + 0] = 0;
-      aWaterNs[idxQuad * 18 + 1] = 1;
-      aWaterNs[idxQuad * 18 + 2] = 0;
+      aWaterNs[idxQuad * 18 + 0] = vWaterNs[idx0].x;
+      aWaterNs[idxQuad * 18 + 1] = vWaterNs[idx0].y;
+      aWaterNs[idxQuad * 18 + 2] = vWaterNs[idx0].z;
 
-      aWaterNs[idxQuad * 18 + 3] = 0;
-      aWaterNs[idxQuad * 18 + 4] = 1;
-      aWaterNs[idxQuad * 18 + 5] = 0;
+      aWaterNs[idxQuad * 18 + 3] = vWaterNs[idx1].x;
+      aWaterNs[idxQuad * 18 + 4] = vWaterNs[idx1].y;
+      aWaterNs[idxQuad * 18 + 5] = vWaterNs[idx1].z;
 
-      aWaterNs[idxQuad * 18 + 6] = 0;
-      aWaterNs[idxQuad * 18 + 7] = 1;
-      aWaterNs[idxQuad * 18 + 8] = 0;
+      aWaterNs[idxQuad * 18 + 6] = vWaterNs[idx2].x;
+      aWaterNs[idxQuad * 18 + 7] = vWaterNs[idx2].y;
+      aWaterNs[idxQuad * 18 + 8] = vWaterNs[idx2].z;
 
       // the second triangle in a quad
       // vertex position
@@ -879,17 +872,17 @@ void computeWaterGeometry() {
       aWaterVtxs[idxQuad * 18 + 17] = vWaterVtxs[idx3].z;
 
       // vertex normal
-      aWaterNs[idxQuad * 18 + 9] = 0;
-      aWaterNs[idxQuad * 18 + 10] = 1;
-      aWaterNs[idxQuad * 18 + 11] = 0;
+      aWaterNs[idxQuad * 18 + 9] = vWaterNs[idx0].x;
+      aWaterNs[idxQuad * 18 + 10] = vWaterNs[idx0].y;
+      aWaterNs[idxQuad * 18 + 11] = vWaterNs[idx0].z;
 
-      aWaterNs[idxQuad * 18 + 12] = 0;
-      aWaterNs[idxQuad * 18 + 13] = 1;
-      aWaterNs[idxQuad * 18 + 14] = 0;
+      aWaterNs[idxQuad * 18 + 12] = vWaterNs[idx2].x;
+      aWaterNs[idxQuad * 18 + 13] = vWaterNs[idx2].y;
+      aWaterNs[idxQuad * 18 + 14] = vWaterNs[idx2].z;
 
-      aWaterNs[idxQuad * 18 + 15] = 0;
-      aWaterNs[idxQuad * 18 + 16] = 1;
-      aWaterNs[idxQuad * 18 + 17] = 0;
+      aWaterNs[idxQuad * 18 + 15] = vWaterNs[idx3].x;
+      aWaterNs[idxQuad * 18 + 16] = vWaterNs[idx3].y;
+      aWaterNs[idxQuad * 18 + 17] = vWaterNs[idx3].z;
 
       idxQuad++;
     }
