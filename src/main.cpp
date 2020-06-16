@@ -72,8 +72,6 @@ float dt = 0.01f;
 vector<vec3> vWaterVtxsOri, vWaterVtxs, vWaterNs;
 GLfloat *aWaterVtxs, *aWaterNs;
 int nOfQuads;
-float omega0;
-float T0 = 500.f; // huge effect
 
 Array2D3v waterPos;
 Array2D3v waterN;
@@ -102,9 +100,9 @@ GLuint shaderSkybox;
 void computeMatricesFromInputs();
 void keyCallback(GLFWwindow *, int, int, int, int);
 float randf();
-vec2 phillipsSpectrum(vec3);
+float phillipsSpectrum(int, int);
 vec2 freqForHeight(vec3, int, int);
-float dispersion(vec3);
+float dispersion(int, int);
 
 void initGL();
 void initOther();
@@ -119,7 +117,7 @@ void updateWaterGeometry();
 
 void step();
 vec2 gaussianRandom(float, float);
-vec4 h0(vec3);
+vec4 h0(int, int);
 
 int main(int argc, char **argv) {
   initGL();
@@ -486,7 +484,6 @@ void initWater() {
   cellSize = 1.f;
   Lx = cellSize * (N - 1);
   Lz = Lx;
-  omega0 = 2.f * PI / T0;
 
   /* for water geometry description */
   nOfQuads = (N - 1) * (M - 1);
@@ -545,9 +542,9 @@ void initWater() {
     for (size_t m = 0; m < M; m++) {
       vec3 k(2.f * PI * n / Lx, 0.f, 2.f * PI * m / Lz);
 
-      tableDisp[n][m] = dispersion(k);
+      tableDisp[n][m] = dispersion(n, m);
 
-      tableH0[n][m] = h0(k);
+      tableH0[n][m] = h0(n, m);
     }
   }
 }
@@ -796,15 +793,14 @@ vec2 gaussianRandom(float m, float s) {
 }
 
 // (Eq.23) Given a wavevector k
-// Ph(k) and Ph(-k) are returned
-// vec2.x is Ph(k), and vec2.y is Ph(-k)
-// Note: Ph(k) and Ph(-k) are both scalar
-vec2 phillipsSpectrum(vec3 k) {
-  float kLen = glm::length(k);
+float phillipsSpectrum(int n, int m) {
+  vec3 k(2.f * PI * n / Lx, 0.f, 2.f * PI * m / Lz);
+
+  float kLen = length(k);
 
   // when kLen == 0, kw will be (nan, nan)
   if (kLen < 0.00001f)
-    return vec2(0, 0);
+    return 0.f;
 
   float kLen2 = kLen * kLen;
   float kLen4 = kLen2 * kLen2;
@@ -824,27 +820,30 @@ vec2 phillipsSpectrum(vec3 k) {
   commonTerm /= (kLen4);
   commonTerm *= exp(-kLen2 * l2);
 
-  vec2 kw = vec2(dot(kDir, windDir), dot(-kDir, windDir));
-  kw = vec2(kw.x * kw.x, kw.y * kw.y);
+  float kw = dot(kDir, windDir);
+  float kw2 = kw * kw;
 
-  return (commonTerm * kw);
+  return (commonTerm * kw2);
 }
 
 // (Eq.25)
 // compute h0(k) and {h0(-k)}*
 // vec4.xy represent the real and imag part of h0(k)
 // vec4.zw represent the real and imag part of {h0(-k)}*
-vec4 h0(vec3 k) {
+vec4 h0(int n, int m) {
+  vec3 k(2.f * PI * n / Lx, 0.f, 2.f * PI * m / Lz);
+
   vec2 gaus = gaussianRandom(0.f, 1.f);
 
   vec2 gausConj = gaussianRandom(0.f, 1.f);
   gausConj.y = -gausConj.y;
 
-  vec2 philSpec = phillipsSpectrum(k);
+  float philSpec = phillipsSpectrum(n, m);
+  float philSpecConj = phillipsSpectrum(-n, -m);
   // std::cout << "philSpec = " << to_string(philSpec) << '\n';
 
-  vec2 h0k = 1.f / sqrt(2.f) * gaus * sqrt(philSpec.x);
-  vec2 h0kConj = 1.f / sqrt(2.f) * gausConj * sqrt(philSpec.y);
+  vec2 h0k = gaus * sqrt(philSpec / 2.f);
+  vec2 h0kConj = gausConj * sqrt(philSpecConj / 2.f);
 
   // std::cout << "h0k = " << to_string(h0k) << '\n';
   // std::cout << "h0kConj = " << to_string(h0kConj) << '\n';
@@ -890,9 +889,12 @@ vec2 freqForHeight(vec3 k, int n, int m) {
 }
 
 // (Eq.14) Dispersion relation
-float dispersion(vec3 k) {
-  float omega = sqrt(glm::length(k) * G);
+float dispersion(int n, int m) {
+  vec3 k(2.f * PI * n / Lx, 0.f, 2.f * PI * m / Lz);
 
+  float omega0 = 2.f * PI / 200.f;
+
+  float omega = sqrt(length(k) * G);
   omega = floor(omega / omega0) * omega0;
 
   return omega;
