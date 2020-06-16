@@ -102,7 +102,7 @@ void computeMatricesFromInputs();
 void keyCallback(GLFWwindow *, int, int, int, int);
 float randf();
 float phillipsSpectrum(int, int);
-Complex freqForHeight(int, int);
+Complex hTilde(int, int);
 float dispersion(int, int);
 
 void initGL();
@@ -118,7 +118,7 @@ void updateWaterGeometry();
 
 void step();
 vec2 gaussianRandom(float, float);
-vec4 h0(int, int);
+vec4 h0Tilde(int, int);
 
 int main(int argc, char **argv) {
   initGL();
@@ -557,11 +557,8 @@ void initWater() {
 
   for (size_t n = 0; n < N; n++) {
     for (size_t m = 0; m < M; m++) {
-      vec3 k(2.f * PI * n / Lx, 0.f, 2.f * PI * m / Lz);
-
       tableDisp[n][m] = dispersion(n, m);
-
-      tableH0[n][m] = h0(n, m);
+      tableH0[n][m] = h0Tilde(n, m);
     }
   }
 }
@@ -617,7 +614,7 @@ void step() {
       // std::cout << "freqDisplaceX: " << to_string(freqDisplaceX) << '\n';
       // std::cout << "freqDisplaceZ: " << to_string(freqDisplaceZ) << '\n';
 
-      heightFreqs[n][m] = freqForHeight(n, m);
+      heightFreqs[n][m] = hTilde(n, m);
       // slopeFreqsX[n][m] = ikX * heightFreqs[n][m];
       // slopeFreqsZ[n][m] = ikZ * heightFreqs[n][m];
       displaceFreqsX[n][m] = ikNormX * heightFreqs[n][m];
@@ -768,12 +765,7 @@ float phillipsSpectrum(int n, int m) {
 }
 
 // (Eq.25)
-// compute h0(k) and {h0(-k)}*
-// vec4.xy represent the real and imag part of h0(k)
-// vec4.zw represent the real and imag part of {h0(-k)}*
-vec4 h0(int n, int m) {
-  vec3 k(2.f * PI * n / Lx, 0.f, 2.f * PI * m / Lz);
-
+vec4 h0Tilde(int n, int m) {
   vec2 gaus = gaussianRandom(0.f, 1.f);
 
   vec2 gausConj = gaussianRandom(0.f, 1.f);
@@ -797,7 +789,7 @@ vec4 h0(int n, int m) {
 // so be careful to change the complex exponent term
 // into (a + ib) before multiplication
 // (a + bi)(c + di) = (ac - bd) + (ad + bc)i
-Complex freqForHeight(int n, int m) {
+Complex hTilde(int n, int m) {
   // std::cout << "k = " << to_string(k) << '\n';
 
   // float omega = dispersion(k);
@@ -807,7 +799,6 @@ Complex freqForHeight(int n, int m) {
   vec2 eTerm = vec2(cos(omega * t), sin(omega * t));
   vec2 eTermConj = vec2(eTerm.x, -eTerm.y);
 
-  // vec4 h0Term = h0(k);
   vec4 h0Term = tableH0[n][m];
 
   // std::cout << "omega = " << omega << '\n';
@@ -831,6 +822,9 @@ Complex freqForHeight(int n, int m) {
 
 // (Eq.14) Dispersion relation
 float dispersion(int n, int m) {
+  n = n - N / 2.f;
+  m = m - M / 2.f;
+
   vec3 k(2.f * PI * n / Lx, 0.f, 2.f * PI * m / Lz);
 
   float omega0 = 2.f * PI / 200.f;
