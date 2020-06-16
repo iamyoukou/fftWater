@@ -115,6 +115,7 @@ void initUniform();
 void initWater();
 void release();
 void computeWaterGeometry();
+void updateWaterGeometry();
 
 void step();
 float gaussianRandom(float, float);
@@ -650,26 +651,7 @@ void step() {
 
   /* update buffer objects */
   computeWaterGeometry();
-
-  glBindVertexArray(vaoWater);
-
-  // vbo for vertex position
-  glBindBuffer(GL_ARRAY_BUFFER, vboWaterVtx);
-  // buffer orphaning
-  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * nOfQuads * 2 * 3 * 3, NULL,
-               GL_STREAM_DRAW);
-  // write data
-  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * nOfQuads * 2 * 3 * 3,
-               aWaterVtxs, GL_STREAM_DRAW);
-
-  // vbo for vertex normal
-  glBindBuffer(GL_ARRAY_BUFFER, vboWaterN);
-  // buffer orphaning
-  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * nOfQuads * 2 * 3 * 3, NULL,
-               GL_STREAM_DRAW);
-  // write data
-  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * nOfQuads * 2 * 3 * 3,
-               aWaterNs, GL_STREAM_DRAW);
+  updateWaterGeometry();
 
   // int nOfFaces = mesh.faces.size();
   //
@@ -912,4 +894,26 @@ void computeWaterGeometry() {
       idxQuad++;
     }
   }
+}
+
+void updateWaterGeometry() {
+  glBindVertexArray(vaoWater);
+
+  // vbo for vertex position
+  glBindBuffer(GL_ARRAY_BUFFER, vboWaterVtx);
+  // buffer orphaning
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * nOfQuads * 2 * 3 * 3, NULL,
+               GL_STREAM_DRAW);
+  // write data
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * nOfQuads * 2 * 3 * 3,
+               aWaterVtxs, GL_STREAM_DRAW);
+
+  // vbo for vertex normal
+  glBindBuffer(GL_ARRAY_BUFFER, vboWaterN);
+  // buffer orphaning
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * nOfQuads * 2 * 3 * 3, NULL,
+               GL_STREAM_DRAW);
+  // write data
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * nOfQuads * 2 * 3 * 3,
+               aWaterNs, GL_STREAM_DRAW);
 }
