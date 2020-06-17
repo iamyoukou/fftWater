@@ -4,3 +4,4 @@ main
 test
 result/
 *.mp4
+*.o

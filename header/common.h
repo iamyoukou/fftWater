@@ -1,11 +1,11 @@
+#ifndef COMMON_H
+#define COMMON_H
+
 #include <iostream>
 #include <string>
 #include <fstream>
 #include <sstream>
 #include <vector>
-#include <cmath>
-#include <cstdlib>
-#include <ctime>
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -22,7 +22,6 @@ using namespace glm;
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 
-/* Define a 3D point */
 typedef struct {
   vec3 pos;
   vec3 color;
@@ -78,4 +77,5 @@ void createMesh(Mesh &);
 void updateMesh(Mesh &);
 void findAABB(Mesh &);
 void drawBox(vec3, vec3);
-void drawPoints(std::vector<Point> &);
+
+#endif

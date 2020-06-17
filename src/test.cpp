@@ -8,10 +8,9 @@ typedef vector<vector<float>> Array2D1f;
 
 int main(int argc, char const *argv[]) {
 
-  Complex c(1, 2);
-  c *= 2.f;
+  Array2D1f a1f(2, vector<float>(3));
 
-  std::cout << c << '\n';
+  std::cout << a1f[1][2] << '\n';
 
   return 0;
 }

@@ -1,163 +1,85 @@
 #include "fft.h"
 
-FFT::FFT() {}
+cFFT::cFFT(unsigned int N) : N(N), reversed(0), W(0), pi2(2 * M_PI) {
+  c[0] = c[1] = 0;
 
-FFT::FFT(int n) {
-  N = n;
-  computeWk();
-}
+  log_2_N = log(N) / log(2);
 
-// Cooley–Tukey FFT (in-place, divide-and-conquer)
-// Higher memory requirements and redundancy although more intuitive
-void FFT::fft(CArray &x) {
-  const size_t N = x.size();
-  if (N <= 1)
-    return;
+  reversed = new unsigned int[N]; // prep bit reversals
+  for (int i = 0; i < N; i++)
+    reversed[i] = reverse(i);
 
-  // divide
-  CArray even = x[std::slice(0, N / 2, 2)];
-  CArray odd = x[std::slice(1, N / 2, 2)];
-
-  // conquer
-  fft(even);
-  fft(odd);
-
-  // combine
-  for (size_t k = 0; k < N / 2; ++k) {
-    // Complex t = std::polar(1.0, -2 * PI * k / N) * odd[k];
-    Complex t = Wk[k] * odd[k];
-    x[k] = even[k] + t;
-    x[k + N / 2] = even[k] - t;
+  int pow2 = 1;
+  W = new Complex *[log_2_N]; // prep W
+  for (int i = 0; i < log_2_N; i++) {
+    W[i] = new Complex[pow2];
+    for (int j = 0; j < pow2; j++)
+      W[i][j] = w(j, pow2 * 2);
+    pow2 *= 2;
   }
+
+  c[0] = new Complex[N];
+  c[1] = new Complex[N];
+  which = 0;
 }
 
-// inverse fft (in-place)
-void FFT::ifft(CArray &x) {
-  // conjugate the complex numbers
-  x = x.apply(std::conj);
-
-  // forward fft
-  fft(x);
-
-  // conjugate the complex numbers again
-  x = x.apply(std::conj);
-
-  // scale the numbers
-  // x /= x.size();
-}
-
-void FFT::fft2(CArray2D &x) {
-  int nOfRows = x.size();
-  int nOfCols = x[0].size();
-
-  // fft for each row
-  for (size_t i = 0; i < nOfRows; i++) {
-    CArray data(nOfRows);
-
-    // implant data
-    for (size_t j = 0; j < data.size(); j++) {
-      data[j] = x[i][j];
-    }
-
-    fft(data);
-
-    // update data
-    for (size_t j = 0; j < data.size(); j++) {
-      x[i][j] = data[j];
-    }
-  } // end fft for each row
-
-  // fft for each column
-  for (size_t i = 0; i < nOfCols; i++) {
-    CArray data(nOfCols);
-
-    // implant data
-    for (size_t j = 0; j < data.size(); j++) {
-      data[j] = x[j][i];
-    }
-
-    fft(data);
-
-    // update data
-    for (size_t j = 0; j < data.size(); j++) {
-      x[j][i] = data[j];
-    }
-  } // end fft for each column
-}
-
-void FFT::ifft2(CArray2D &x) {
-  int nOfRows = x.size();
-  int nOfCols = x[0].size();
-
-  // ifft for each row
-  for (size_t i = 0; i < nOfRows; i++) {
-    CArray data(nOfRows);
-
-    // implant data
-    for (size_t j = 0; j < data.size(); j++) {
-      data[j] = x[i][j];
-    }
-
-    ifft(data);
-
-    // update data
-    for (size_t j = 0; j < data.size(); j++) {
-      x[i][j] = data[j];
-    }
-  } // end ifft for each row
-
-  // ifft for each column
-  for (size_t i = 0; i < nOfCols; i++) {
-    CArray data(nOfCols);
-
-    // implant data
-    for (size_t j = 0; j < data.size(); j++) {
-      data[j] = x[j][i];
-    }
-
-    ifft(data);
-
-    // update data
-    for (size_t j = 0; j < data.size(); j++) {
-      x[j][i] = data[j];
-    }
-  } // end ifft for each column
-}
-
-void FFT::computeWk() {
-  Wk.resize(N);
-
-  for (size_t i = 0; i < Wk.size(); i++) {
-    // Wk[i] = polar(1.0, -2 * PI * i / N);
-    Wk[i] = polar(1.0, -2 * PI * i / Lx);
+cFFT::~cFFT() {
+  if (c[0])
+    delete[] c[0];
+  if (c[1])
+    delete[] c[1];
+  if (W) {
+    for (int i = 0; i < log_2_N; i++)
+      if (W[i])
+        delete[] W[i];
+    delete[] W;
   }
+  if (reversed)
+    delete[] reversed;
 }
 
-/* Test code */
-// FFT fft(4);
-//
-// CArray2D test = {{1, 2, 3, 4}, {1, 2, 3, 4}, {1, 2, 3, 4}, {1, 2, 3, 4}};
-//
-// /* FFT 2D */
-// fft.fft2(test);
-//
-// std::cout << "after 2D fft:" << '\n';
-// for (size_t i = 0; i < 4; i++) {
-//   std::cout << test[i][0] << ", ";
-//   std::cout << test[i][1] << ", ";
-//   std::cout << test[i][2] << ", ";
-//   std::cout << test[i][3] << '\n';
-// }
-// std::cout << '\n';
-//
-// /* IFFT 2D */
-// fft.ifft2(test);
-//
-// std::cout << "after 2D ifft: " << '\n';
-// for (size_t i = 0; i < 4; i++) {
-//   std::cout << test[i][0].real() << ", ";
-//   std::cout << test[i][1].real() << ", ";
-//   std::cout << test[i][2].real() << ", ";
-//   std::cout << test[i][3].real() << '\n';
-// }
-// }
+unsigned int cFFT::reverse(unsigned int i) {
+  unsigned int res = 0;
+  for (int j = 0; j < log_2_N; j++) {
+    res = (res << 1) + (i & 1);
+    i >>= 1;
+  }
+  return res;
+}
+
+Complex cFFT::w(unsigned int x, unsigned int N) {
+  return Complex(cos(pi2 * x / N), sin(pi2 * x / N));
+}
+
+void cFFT::fft(Complex *input, Complex *output, int stride, int offset) {
+  for (int i = 0; i < N; i++)
+    c[which][i] = input[reversed[i] * stride + offset];
+
+  int loops = N >> 1;
+  int size = 1 << 1;
+  int size_over_2 = 1;
+  int w_ = 0;
+  for (int i = 1; i <= log_2_N; i++) {
+    which ^= 1;
+    for (int j = 0; j < loops; j++) {
+      for (int k = 0; k < size_over_2; k++) {
+        c[which][size * j + k] =
+            c[which ^ 1][size * j + k] +
+            c[which ^ 1][size * j + size_over_2 + k] * W[w_][k];
+      }
+
+      for (int k = size_over_2; k < size; k++) {
+        c[which][size * j + k] =
+            c[which ^ 1][size * j - size_over_2 + k] -
+            c[which ^ 1][size * j + k] * W[w_][k - size_over_2];
+      }
+    }
+    loops >>= 1;
+    size <<= 1;
+    size_over_2 <<= 1;
+    w_++;
+  }
+
+  for (int i = 0; i < N; i++)
+    output[i * stride + offset] = c[which][i];
+}

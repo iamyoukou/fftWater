@@ -103,6 +103,16 @@ All the projects which have nice outputs design a specified IFFT,
 instead of using a standard IFFT routine (e.g.[Cooley–Tukey FFT](https://rosettacode.org/wiki/Fast_Fourier_transform#C.2B.2B)).
 I will try to fix this problem in the future.
 
+## A guess
+
+Generally, the standard library of FFT assumes that the sampling position is not negative.
+However, the wave vectors used in [Tessendorf, 2001] must have negative components.
+Therefore, the `(x, z)` components of a wave vector will always be non-negative if we use the standard FFT.
+
+For example, if the components of a wave vector are always non-negative,
+the wave direction used in Phillips spectrum will never exist in `[+x, -z]` and `[-x, +z]` orthants.
+This may cause the loss of variety of wave directions, and hence cause the weird appearance.
+
 # Reference
 [Tessendorf, 2001] Tessendorf, Jerry. "Simulating ocean water." Simulating nature: realistic and interactive techniques. SIGGRAPH 1.2 (2001): 5.
 
