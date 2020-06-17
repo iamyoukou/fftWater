@@ -88,9 +88,22 @@ Assume we have a 2D frequency term `F(u, v)`, then
 
 - Perform IFFT on each column of `f(u, y)` to get `f(x, y)`.
 
+# Result
+
+Recently, I had some strange result as following.
+
+![output](./output.gif)
+
+Although it shows some wavy pattern,
+there are many "weird squares" within it.
+
+Based on some articles and projects that I have found,
+I wonder if it is because the IFFT I have used.
+All the projects which have nice outputs design a specified IFFT,
+instead of using a standard IFFT routine (e.g.[Cooley–Tukey FFT](https://rosettacode.org/wiki/Fast_Fourier_transform#C.2B.2B)).
+I will try to fix this problem in the future.
+
 # Reference
 [Tessendorf, 2001] Tessendorf, Jerry. "Simulating ocean water." Simulating nature: realistic and interactive techniques. SIGGRAPH 1.2 (2001): 5.
-
-[Cooley–Tukey FFT](https://rosettacode.org/wiki/Fast_Fourier_transform#C.2B.2B)
 
 [Gaussian random number generator](https://www.taygeta.com/random/gaussian.html)
