@@ -20,21 +20,19 @@ Their differences are just the coefficient and the conjugate exponent.
 
 # About this project
 
-This project is based on the paper [Tessendorf, 2001] and the code from [Scrawk](https://github.com/Scrawk/Phillips-Ocean).
+[Keith Lantz](https://www.keithlantz.net/2011/10/ocean-simulation-part-one-using-the-discrete-fourier-transform/) has provided a nice implementation of [Tessendorf, 2001], and I use it as a start point.
+The goal of this project is to create an ocean scene which I have seen in many video games.
+It will have features as following:
 
-Although Scrawk's implementation already has a nice result, some problems exist.
+- Realistic appearance: reflections, refractions, foams, caustics, etc.
 
-1. The ocean shows obvious artifacts when the viewer moves far away.
+- Can interact with objects (i.e. buoyancy).
 
-2. The shading method is not realistic enough.
+- Everything works in real time.
 
-3. It cannot create foam.
+- and so on.
 
-4. The ocean cannot interact with objects.
-
-I will try to fix those problems and produce a better result.
-
-# Update the geometry of the water
+# Tricks to reduce cost
 
 There are `three` things to calculate each frame.
 
@@ -54,66 +52,28 @@ their complex exponent terms are always the same, i.e.
 So it is better to calculate these exponents once before simulation,
 and write them into a lookup table.
 Then, access that table when performing IFFT in each frame.
-Scrawk has shown this optimization in his code.
 
-# IFFT
+# A specially designed IFFT
 
-To be more obvious, `Eq. 19` can be rewritten as following.
+Using standard FFT codes (e.g. [Cooley–Tukey FFT](https://rosettacode.org/wiki/Fast_Fourier_transform#C.2B.2B)) results in incorrect geometry changes.
+Generally, standard FFT assumes that the sampling position is non-negative.
+However, the wave vectors used in [Tessendorf, 2001] have negative components.
+This constraint guarantees the variety of wave directions.
+For example, if a wave vector only has non-negative components,
+its direction will always reside in `[+x, +z]` and `[-x, -z]` orthants, and hence,
+waves with directions within `[-x, +z]` and `[+x, -z]` orthants are lost.
 
-![eq19](./image/eq19.png)
-
-Note that:
-
-- The grid size `(Lx, Lz)` is used in the exponent term,
-instead of the number of sampling points `(N, M)`.
-
-- Some IFFT routine has a `1/NM` coefficient on the right side.
-
-- `Eq. 26` provides the frequency term.
-
-`Eq. 19, 20` can also be rewritten in a similar way.
-The additional complex term `ik` has the following property:
-
-![ia](./image/ia.png)
-
-Using this property, `ik` can be multiplied with the frequency term.
-
-## 2D IFFT
-
-According to [this article](https://www.ft.unicamp.br/docentes/magic/khoros/html-dip/c5/s2/front-page.html), a 2D IFFT can be calculated with a two-step 1D IFFT.
-
-Assume we have a 2D frequency term `F(u, v)`, then
-
-- Perform IFFT on each row of `F(u, v)` to get `f(u, y)`.
-
-- Perform IFFT on each column of `f(u, y)` to get `f(x, y)`.
+Furthermore, a standard FFT assumes that the range of summation is also non-negative.
+Based on this constraint, it designs the complex exponent set and iterations.
+However, the range used in [Tessendorf, 2001] is `[-N/2, N/2)`, with `N` representing the number of sampling points.
+It means that a different set of complex exponents should be used.
+Therefore, a special IFFT must be designed for [Tessendorf, 2001].
 
 # Result
 
-Recently, I had some strange result as following.
-
 ![output](./output.gif)
 
-Although it shows some wavy pattern,
-there are many "weird squares" within it.
-
-Based on some articles and projects that I have found,
-I wonder if it is because the IFFT I have used.
-All the projects which have nice outputs design a specified IFFT,
-instead of using a standard IFFT routine (e.g.[Cooley–Tukey FFT](https://rosettacode.org/wiki/Fast_Fourier_transform#C.2B.2B)).
-I will try to fix this problem in the future.
-
-## A guess
-
-Generally, the standard library of FFT assumes that the sampling position is not negative.
-However, the wave vectors used in [Tessendorf, 2001] must have negative components.
-Therefore, the `(x, z)` components of a wave vector will always be non-negative if we use the standard FFT.
-
-For example, if the components of a wave vector are always non-negative,
-the wave direction used in Phillips spectrum will never exist in `[+x, -z]` and `[-x, +z]` orthants.
-This may cause the loss of variety of wave directions, and hence cause the weird appearance.
+I have modified [Keith Lantz's code](https://github.com/klantz81/ocean-simulation/tree/master/src) and it can be run on `OSX` now.
 
 # Reference
 [Tessendorf, 2001] Tessendorf, Jerry. "Simulating ocean water." Simulating nature: realistic and interactive techniques. SIGGRAPH 1.2 (2001): 5.
-
-[Gaussian random number generator](https://www.taygeta.com/random/gaussian.html)
