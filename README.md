@@ -69,6 +69,21 @@ However, the range used in [Tessendorf, 2001] is `[-N/2, N/2)`, with `N` represe
 It means that a different set of complex exponents should be used.
 Therefore, a special IFFT must be designed for [Tessendorf, 2001].
 
+# Stormy effect
+
+A stormy or calm ocean can be easily obtained using a scaling matrix.
+
+```
+mat4 newModel = scale(mat4(1.f), vec3(sx, sy, sz));
+glUniformMatrix4fv(uniformOceanModel, 1, GL_FALSE, value_ptr(newModel));
+glDrawArrays(GL_TRIANGLES, 0, nOfTriangles);
+```
+
+If the difference between the vertical scaling `sy`
+and the horizontal scaling `(sx, xz)` is small,
+we will have a stormy ocean.
+Otherwise, we will have a relatively calm ocean.
+
 # Result
 
 ![output](./output.gif)

@@ -21,14 +21,14 @@ Skybox skybox;
 bool saveTrigger = false;
 int frameNumber = 0;
 
-float verticalAngle = -2.36374;
-float horizontalAngle = 6.25339;
+float verticalAngle = -1.71874;
+float horizontalAngle = 2.4934;
 float initialFoV = 45.0f;
 float speed = 5.0f;
 float mouseSpeed = 0.005f;
 float farPlane = 2000.f;
 
-vec3 eyePoint = vec3(49.897549, 40.268173, -3.964368);
+vec3 eyePoint = vec3(40.492981, 15.879280, -17.939962);
 vec3 eyeDirection =
     vec3(sin(verticalAngle) * cos(horizontalAngle), cos(verticalAngle),
          sin(verticalAngle) * sin(horizontalAngle));
@@ -66,9 +66,11 @@ int main(int argc, char *argv[]) {
     computeMatricesFromInputs();
 
     // skybox
+    glEnable(GL_CULL_FACE);
     skybox.draw();
 
     // ocean
+    glDisable(GL_CULL_FACE);
     ocean.render(timer.elapsed(false), vec3(20, 20, 20), oceanP, oceanV, oceanM,
                  false);
 
@@ -78,24 +80,23 @@ int main(int argc, char *argv[]) {
     /* Poll for and process events */
     glfwPollEvents();
 
-    // if (saveTrigger) {
-    //   string dir = "./result/output";
-    //   // zero padding
-    //   // e.g. "output0001.bmp"
-    //   string num = to_string(frameNumber);
-    //   num = string(4 - num.length(), '0') + num;
-    //   string output = dir + num + ".bmp";
-    //
-    //   FIBITMAP *outputImage =
-    //       FreeImage_AllocateT(FIT_UINT32, WINDOW_WIDTH * 2, WINDOW_HEIGHT *
-    //       2);
-    //   glReadPixels(0, 0, WINDOW_WIDTH * 2, WINDOW_HEIGHT * 2, GL_BGRA,
-    //                GL_UNSIGNED_INT_8_8_8_8_REV,
-    //                (GLvoid *)FreeImage_GetBits(outputImage));
-    //   FreeImage_Save(FIF_BMP, outputImage, output.c_str(), 0);
-    //   std::cout << output << " saved." << '\n';
-    //   frameNumber++;
-    // }
+    if (saveTrigger) {
+      string dir = "./result/output";
+      // zero padding
+      // e.g. "output0001.bmp"
+      string num = to_string(frameNumber);
+      num = string(4 - num.length(), '0') + num;
+      string output = dir + num + ".bmp";
+
+      FIBITMAP *outputImage =
+          FreeImage_AllocateT(FIT_UINT32, WINDOW_WIDTH * 2, WINDOW_HEIGHT * 2);
+      glReadPixels(0, 0, WINDOW_WIDTH * 2, WINDOW_HEIGHT * 2, GL_BGRA,
+                   GL_UNSIGNED_INT_8_8_8_8_REV,
+                   (GLvoid *)FreeImage_GetBits(outputImage));
+      FreeImage_Save(FIF_BMP, outputImage, output.c_str(), 0);
+      std::cout << output << " saved." << '\n';
+      frameNumber++;
+    }
   }
 
   ocean.release();
@@ -149,11 +150,10 @@ void initGL() {
   }
 
   glEnable(GL_CULL_FACE);
-  // glCullFace(GL_FRONT);
   glEnable(GL_DEPTH_TEST); // must enable depth test!!
 
-  glEnable(GL_PROGRAM_POINT_SIZE);
-  glPointSize(15);
+  // glEnable(GL_PROGRAM_POINT_SIZE);
+  // glPointSize(15);
 }
 
 void computeMatricesFromInputs() {

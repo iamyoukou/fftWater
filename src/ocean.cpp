@@ -426,43 +426,37 @@ void cOcean::render(float t, glm::vec3 light_pos, glm::mat4 Projection,
   evaluateWavesFFT(t);
   // }
 
+  computeWaterGeometry();
+  updateWaterGeometry();
+
   // update transform matrix
   glUseProgram(glProgram);
   glUniform3f(light_position, light_pos.x, light_pos.y, light_pos.z);
   glUniformMatrix4fv(projection, 1, GL_FALSE, glm::value_ptr(Projection));
   glUniformMatrix4fv(view, 1, GL_FALSE, glm::value_ptr(View));
   glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(Model));
-  //
-  // glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
-  // glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertex_ocean) * Nplus1 * Nplus1,
-  //                 vertices);
-  // glEnableVertexAttribArray(vertex);
-  // glVertexAttribPointer(vertex, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_ocean),
-  // 0); glEnableVertexAttribArray(normal); glVertexAttribPointer(normal, 3,
-  // GL_FLOAT, GL_FALSE, sizeof(vertex_ocean),
-  //                       (char *)NULL + 12);
-  // glEnableVertexAttribArray(texture);
-  // glVertexAttribPointer(texture, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_ocean),
-  //                       (char *)NULL + 24);
-  //
-  // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_indices);
-  // for (int j = 0; j < 10; j++) {
-  //   for (int i = 0; i < 10; i++) {
-  //     Model = glm::scale(glm::mat4(1.0f), glm::vec3(5.f, 5.f, 5.f));
-  //     Model = glm::translate(Model, glm::vec3(length * i, 0, length * -j));
-  //     glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(Model));
-  //     glDrawElements(GL_TRIANGLES, indices_count, GL_UNSIGNED_INT, 0);
-  //   }
-  // }
-  // glDrawElements(GL_TRIANGLES, indices_count, GL_UNSIGNED_INT, 0);
-  //
 
-  computeWaterGeometry();
-  updateWaterGeometry();
-
-  glUseProgram(glProgram);
   glBindVertexArray(vao);
-  glDrawArrays(GL_TRIANGLES, 0, nOfQuads * 2 * 3);
+
+  // duplicated
+  for (int j = 0; j < 5; j++) {
+    for (int i = 0; i < 5; i++) {
+      // modify the scale matrix to obtain different visual effect
+      // to obtain a stromy ocean,
+      // decrease the difference between scaleY and (scaleX, scaleZ)
+      // e.g. vec3(10.f, 10.f, 10.f)
+      // on the other hand, (10.f, 2.5f, 10.f) gives a relatively calm ocean
+      Model = glm::scale(glm::mat4(1.0f), glm::vec3(10.f, 2.5f, 10.f));
+      Model = glm::translate(Model, glm::vec3(length * i, 0, length * -j));
+      glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(Model));
+
+      glDrawArrays(GL_TRIANGLES, 0, nOfQuads * 2 * 3);
+    }
+  }
+
+  // single
+  // glBindVertexArray(vao);
+  // glDrawArrays(GL_TRIANGLES, 0, nOfQuads * 2 * 3);
 
   // drawPoints();
 }
