@@ -41,11 +41,13 @@ mat4 oceanM, oceanV, oceanP;
 GLuint fboScreenQuad, tboScreenQuad, vaoScreenQuad;
 GLuint vboScreenQuad, rboDepthScreenQuad;
 GLuint shaderScreenQuad;
-GLint uniScreenQuadTex;
+GLint uniScreenQuadTex, uniAlpha, uniBaseColor;
 
 GLfloat vtxsScreenQuad[] = {
     -1, -1, 1, -1, -1, 1, 1, 1,
 };
+
+vec4 underwaterColor(0.0, 0.65, 0.75, 1.0);
 
 int main(int argc, char *argv[]) {
   initGL();
@@ -97,6 +99,14 @@ int main(int argc, char *argv[]) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glUseProgram(shaderScreenQuad);
+
+    // for underwater scene
+    if (eyePoint.y < -5.f) {
+      glUniform1f(uniAlpha, 0.75f);
+    } else {
+      glUniform1f(uniAlpha, 1.f);
+    }
+
     glBindVertexArray(vaoScreenQuad);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
@@ -324,8 +334,14 @@ void initUniform() {
 
   /* Screen quad */
   glUseProgram(shaderScreenQuad);
+
   uniScreenQuadTex = myGetUniformLocation(shaderScreenQuad, "tex");
+  uniAlpha = myGetUniformLocation(shaderScreenQuad, "alpha");
+  uniBaseColor = myGetUniformLocation(shaderScreenQuad, "baseColor");
+
   glUniform1i(uniScreenQuadTex, 10);
+  glUniform1f(uniAlpha, 1.f);
+  glUniform4fv(uniBaseColor, 1, value_ptr(underwaterColor));
 }
 
 void initMatrix() {
