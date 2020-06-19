@@ -11,7 +11,7 @@ void initShader();
 void initMatrix();
 void initUniform();
 void initSkybox();
-void initUnderwater();
+void initScreenQuad();
 
 void computeMatricesFromInputs();
 void keyCallback(GLFWwindow *, int, int, int, int);
@@ -38,9 +38,10 @@ vec3 up = vec3(0.f, 1.f, 0.f);
 mat4 oceanM, oceanV, oceanP;
 
 /* for underwater effect */
-GLuint fboUnderwater, tboUnderwater;
+GLuint fboScreenQuad, tboUnderwater, vaoScreenQuad;
 GLuint vboScreenQuad;
 GLuint shaderScreenQuad;
+GLint uniScreenQuadTex;
 
 GLfloat vtxsScreenQuad[] = {
     -1, -1, 1, -1, -1, 1, 1, 1,
@@ -52,7 +53,7 @@ int main(int argc, char *argv[]) {
   initShader();
   initMatrix();
   initUniform();
-  initUnderwater();
+  // initScreenQuad();
 
   skybox.init();
 
@@ -76,6 +77,9 @@ int main(int argc, char *argv[]) {
     // view control
     computeMatricesFromInputs();
 
+    /* render to framebuffer */
+    // glBindFramebuffer(GL_FRAMEBUFFER, fboScreenQuad);
+
     // skybox
     glEnable(GL_CULL_FACE);
     skybox.draw();
@@ -84,6 +88,13 @@ int main(int argc, char *argv[]) {
     glDisable(GL_CULL_FACE);
     ocean.render(timer.elapsed(false), vec3(20, 20, 20), oceanP, oceanV, oceanM,
                  false);
+
+    /* render to main screen */
+    // glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    // glUseProgram(shaderScreenQuad);
+    // glUniform1i(uniScreenQuadTex, 10);
+    // glBindVertexArray(vaoScreenQuad);
+    // glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
     // refresh frame
     glfwSwapBuffers(window);
@@ -306,6 +317,9 @@ void initUniform() {
   glUniformMatrix4fv(skybox.uniM, 1, GL_FALSE, value_ptr(skybox.M));
   glUniformMatrix4fv(skybox.uniV, 1, GL_FALSE, value_ptr(skybox.V));
   glUniformMatrix4fv(skybox.uniP, 1, GL_FALSE, value_ptr(skybox.P));
+
+  /* Screen quad */
+  uniScreenQuadTex = myGetUniformLocation(shaderScreenQuad, "tex");
 }
 
 void initMatrix() {
@@ -335,18 +349,18 @@ void initOther() {
   srand(clock());
 }
 
-void initUnderwater() {
+void initScreenQuad() {
   /* Texture */
-  glActiveTexture(GL_TEXTURE0);
+  glActiveTexture(GL_TEXTURE0 + 10);
   glGenTextures(1, &tboUnderwater);
   glBindTexture(GL_TEXTURE_2D, tboUnderwater);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WINDOW_WIDTH, WINDOW_HEIGHT, 0,
-               GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-  glBindTexture(GL_TEXTURE_2D, 0);
+  // On OSX, must use WINDOW_WIDTH * 2 and WINDOW_HEIGHT * 2, don't know why
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WINDOW_WIDTH * 2, WINDOW_HEIGHT * 2,
+               0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
   /* Depth buffer */
   // glGenRenderbuffers(1, &rbo_depth);
@@ -356,8 +370,8 @@ void initUnderwater() {
   // glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
   /* Framebuffer to link everything together */
-  glGenFramebuffers(1, &fboUnderwater);
-  glBindFramebuffer(GL_FRAMEBUFFER, fboUnderwater);
+  glGenFramebuffers(1, &fboScreenQuad);
+  glBindFramebuffer(GL_FRAMEBUFFER, fboScreenQuad);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                          tboUnderwater, 0);
   // glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
@@ -373,10 +387,13 @@ void initUnderwater() {
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
   // screen quad
+  glGenVertexArrays(1, &vaoScreenQuad);
+  glBindVertexArray(vaoScreenQuad);
+
   glGenBuffers(1, &vboScreenQuad);
   glBindBuffer(GL_ARRAY_BUFFER, vboScreenQuad);
   glBufferData(GL_ARRAY_BUFFER, sizeof(vtxsScreenQuad), vtxsScreenQuad,
                GL_STATIC_DRAW);
-
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+  glEnableVertexAttribArray(0);
 }
