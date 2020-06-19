@@ -38,8 +38,8 @@ vec3 up = vec3(0.f, 1.f, 0.f);
 mat4 oceanM, oceanV, oceanP;
 
 /* for underwater effect */
-GLuint fboScreenQuad, tboUnderwater, vaoScreenQuad;
-GLuint vboScreenQuad;
+GLuint fboScreenQuad, tboScreenQuad, vaoScreenQuad;
+GLuint vboScreenQuad, rboDepthScreenQuad;
 GLuint shaderScreenQuad;
 GLint uniScreenQuadTex;
 
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
   initShader();
   initMatrix();
   initUniform();
-  // initScreenQuad();
+  initScreenQuad();
 
   skybox.init();
 
@@ -70,15 +70,15 @@ int main(int argc, char *argv[]) {
 
   /* Loop until the user closes the window */
   while (!glfwWindowShouldClose(window)) {
-    /* Render here */
-    glClearColor(97 / 256.f, 175 / 256.f, 239 / 256.f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     // view control
     computeMatricesFromInputs();
 
     /* render to framebuffer */
-    // glBindFramebuffer(GL_FRAMEBUFFER, fboScreenQuad);
+    glBindFramebuffer(GL_FRAMEBUFFER, fboScreenQuad);
+
+    // clear framebuffer
+    glClearColor(97 / 256.f, 175 / 256.f, 239 / 256.f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // skybox
     glEnable(GL_CULL_FACE);
@@ -90,11 +90,15 @@ int main(int argc, char *argv[]) {
                  false);
 
     /* render to main screen */
-    // glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    // glUseProgram(shaderScreenQuad);
-    // glUniform1i(uniScreenQuadTex, 10);
-    // glBindVertexArray(vaoScreenQuad);
-    // glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // clear framebuffer
+    glClearColor(97 / 256.f, 175 / 256.f, 239 / 256.f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glUseProgram(shaderScreenQuad);
+    glBindVertexArray(vaoScreenQuad);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
     // refresh frame
     glfwSwapBuffers(window);
@@ -319,7 +323,9 @@ void initUniform() {
   glUniformMatrix4fv(skybox.uniP, 1, GL_FALSE, value_ptr(skybox.P));
 
   /* Screen quad */
+  glUseProgram(shaderScreenQuad);
   uniScreenQuadTex = myGetUniformLocation(shaderScreenQuad, "tex");
+  glUniform1i(uniScreenQuadTex, 10);
 }
 
 void initMatrix() {
@@ -352,8 +358,8 @@ void initOther() {
 void initScreenQuad() {
   /* Texture */
   glActiveTexture(GL_TEXTURE0 + 10);
-  glGenTextures(1, &tboUnderwater);
-  glBindTexture(GL_TEXTURE_2D, tboUnderwater);
+  glGenTextures(1, &tboScreenQuad);
+  glBindTexture(GL_TEXTURE_2D, tboScreenQuad);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -363,19 +369,19 @@ void initScreenQuad() {
                0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
   /* Depth buffer */
-  // glGenRenderbuffers(1, &rbo_depth);
-  // glBindRenderbuffer(GL_RENDERBUFFER, rbo_depth);
-  // glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, WINDOW_WIDTH,
-  //                       WINDOW_HEIGHT);
-  // glBindRenderbuffer(GL_RENDERBUFFER, 0);
+  glGenRenderbuffers(1, &tboScreenQuad);
+  glBindRenderbuffer(GL_RENDERBUFFER, tboScreenQuad);
+  // On OSX, must use WINDOW_WIDTH * 2 and WINDOW_HEIGHT * 2, don't know why
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, WINDOW_WIDTH * 2,
+                        WINDOW_HEIGHT * 2);
 
   /* Framebuffer to link everything together */
   glGenFramebuffers(1, &fboScreenQuad);
   glBindFramebuffer(GL_FRAMEBUFFER, fboScreenQuad);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         tboUnderwater, 0);
-  // glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-  //                           GL_RENDERBUFFER, rbo_depth);
+                         tboScreenQuad, 0);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                            GL_RENDERBUFFER, tboScreenQuad);
 
   GLenum status;
   if ((status = glCheckFramebufferStatus(GL_FRAMEBUFFER)) !=
@@ -383,8 +389,6 @@ void initScreenQuad() {
     fprintf(stderr, "glCheckFramebufferStatus: error %u", status);
     exit(EXIT_FAILURE);
   }
-
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
   // screen quad
   glGenVertexArrays(1, &vaoScreenQuad);
