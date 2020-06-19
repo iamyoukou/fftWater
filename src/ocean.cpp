@@ -106,7 +106,7 @@ cOcean::cOcean(const int N, const float A, const vec2 w, const float length,
   glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(1);
 
-  glProgram = buildShader("./shader/oceanv.glsl", "./shader/oceanf.glsl");
+  glProgram = buildShader("./shader/vsOcean.glsl", "./shader/fsOcean.glsl");
   // glProgram = buildShader("./shader/vsPoint.glsl", "./shader/fsPoint.glsl");
 
   // vertex = myGetUniformLocation(glProgram, "vertex");

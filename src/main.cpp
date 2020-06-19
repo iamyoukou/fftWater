@@ -11,6 +11,7 @@ void initShader();
 void initMatrix();
 void initUniform();
 void initSkybox();
+void initUnderwater();
 
 void computeMatricesFromInputs();
 void keyCallback(GLFWwindow *, int, int, int, int);
@@ -24,7 +25,7 @@ int frameNumber = 0;
 float verticalAngle = -1.71874;
 float horizontalAngle = 2.4934;
 float initialFoV = 45.0f;
-float speed = 5.0f;
+float speed = 25.0f;
 float mouseSpeed = 0.005f;
 float farPlane = 2000.f;
 
@@ -36,12 +37,22 @@ vec3 up = vec3(0.f, 1.f, 0.f);
 
 mat4 oceanM, oceanV, oceanP;
 
+/* for underwater effect */
+GLuint fboUnderwater, tboUnderwater;
+GLuint vboScreenQuad;
+GLuint shaderScreenQuad;
+
+GLfloat vtxsScreenQuad[] = {
+    -1, -1, 1, -1, -1, 1, 1, 1,
+};
+
 int main(int argc, char *argv[]) {
   initGL();
   initOther();
   initShader();
   initMatrix();
   initUniform();
+  initUnderwater();
 
   skybox.init();
 
@@ -80,6 +91,7 @@ int main(int argc, char *argv[]) {
     /* Poll for and process events */
     glfwPollEvents();
 
+    // save frame
     if (saveTrigger) {
       string dir = "./result/output";
       // zero padding
@@ -205,6 +217,14 @@ void computeMatricesFromInputs() {
   if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
     eyePoint -= right * deltaTime * speed;
   }
+  // dive
+  if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
+    eyePoint -= newUp * deltaTime * speed;
+  }
+  // rise
+  if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS) {
+    eyePoint += newUp * deltaTime * speed;
+  }
 
   mat4 newV = lookAt(eyePoint, eyePoint + direction, newUp);
   mat4 newP = perspective(initialFoV, 1.f * WINDOW_WIDTH / WINDOW_HEIGHT, 0.1f,
@@ -269,6 +289,9 @@ void keyCallback(GLFWwindow *keyWnd, int key, int scancode, int action,
 void initShader() {
   skybox.shader =
       buildShader("./shader/vsSkybox.glsl", "./shader/fsSkybox.glsl");
+
+  shaderScreenQuad =
+      buildShader("./shader/vsScreenQuad.glsl", "./shader/fsScreenQuad.glsl");
 }
 
 void initUniform() {
@@ -310,4 +333,50 @@ void initOther() {
   // initialize random seed
   // this makes the ocean geometry different in every execution
   srand(clock());
+}
+
+void initUnderwater() {
+  /* Texture */
+  glActiveTexture(GL_TEXTURE0);
+  glGenTextures(1, &tboUnderwater);
+  glBindTexture(GL_TEXTURE_2D, tboUnderwater);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WINDOW_WIDTH, WINDOW_HEIGHT, 0,
+               GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+  glBindTexture(GL_TEXTURE_2D, 0);
+
+  /* Depth buffer */
+  // glGenRenderbuffers(1, &rbo_depth);
+  // glBindRenderbuffer(GL_RENDERBUFFER, rbo_depth);
+  // glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, WINDOW_WIDTH,
+  //                       WINDOW_HEIGHT);
+  // glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+  /* Framebuffer to link everything together */
+  glGenFramebuffers(1, &fboUnderwater);
+  glBindFramebuffer(GL_FRAMEBUFFER, fboUnderwater);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         tboUnderwater, 0);
+  // glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+  //                           GL_RENDERBUFFER, rbo_depth);
+
+  GLenum status;
+  if ((status = glCheckFramebufferStatus(GL_FRAMEBUFFER)) !=
+      GL_FRAMEBUFFER_COMPLETE) {
+    fprintf(stderr, "glCheckFramebufferStatus: error %u", status);
+    exit(EXIT_FAILURE);
+  }
+
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+  // screen quad
+  glGenBuffers(1, &vboScreenQuad);
+  glBindBuffer(GL_ARRAY_BUFFER, vboScreenQuad);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vtxsScreenQuad), vtxsScreenQuad,
+               GL_STATIC_DRAW);
+
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
