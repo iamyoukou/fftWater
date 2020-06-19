@@ -197,108 +197,6 @@ Complex cOcean::hTilde(float t, int n_prime, int m_prime) {
   return htilde0 * c0 + htilde0mkconj * c1;
 }
 
-complex_vector_normal cOcean::h_D_and_n(vec2 x, float t) {
-  Complex h(0.0f, 0.0f);
-  vec2 D(0.0f, 0.0f);
-  vec3 n(0.0f, 0.0f, 0.0f);
-
-  Complex c, res, htilde_c;
-  vec2 k;
-  float kx, kz, k_length, k_dot_x;
-
-  for (int m_prime = 0; m_prime < N; m_prime++) {
-    kz = 2.0f * M_PI * (m_prime - N / 2.0f) / length;
-    for (int n_prime = 0; n_prime < N; n_prime++) {
-      kx = 2.0f * M_PI * (n_prime - N / 2.0f) / length;
-      k = vec2(kx, kz);
-
-      k_length = glm::length(k);
-      k_dot_x = dot(k, w);
-
-      c = Complex(cos(k_dot_x), sin(k_dot_x));
-      htilde_c = hTilde(t, n_prime, m_prime) * c;
-
-      h = h + htilde_c;
-
-      n = n + vec3(-kx * htilde_c.imag(), 0.0f, -kz * htilde_c.imag());
-
-      if (k_length < 0.000001)
-        continue;
-      D = D + vec2(kx / k_length * htilde_c.imag(),
-                   kz / k_length * htilde_c.imag());
-    }
-  }
-
-  n = normalize(vec3(0.0f, 1.0f, 0.0f) - n);
-
-  complex_vector_normal cvn;
-  cvn.h = h;
-  cvn.D = D;
-  cvn.n = n;
-  return cvn;
-}
-
-void cOcean::evaluateWaves(float t) {
-  float lambda = -1.0;
-  int index;
-  vec2 x;
-  vec2 d;
-  complex_vector_normal h_d_and_n;
-  for (int m_prime = 0; m_prime < N; m_prime++) {
-    for (int n_prime = 0; n_prime < N; n_prime++) {
-      index = m_prime * Nplus1 + n_prime;
-
-      x = vec2(vertices[index].x, vertices[index].z);
-
-      h_d_and_n = h_D_and_n(x, t);
-
-      vertices[index].y = h_d_and_n.h.real();
-
-      vertices[index].x = vertices[index].ox + lambda * h_d_and_n.D.x;
-      vertices[index].z = vertices[index].oz + lambda * h_d_and_n.D.y;
-
-      vertices[index].nx = h_d_and_n.n.x;
-      vertices[index].ny = h_d_and_n.n.y;
-      vertices[index].nz = h_d_and_n.n.z;
-
-      if (n_prime == 0 && m_prime == 0) {
-        vertices[index + N + Nplus1 * N].y = h_d_and_n.h.real();
-
-        vertices[index + N + Nplus1 * N].x =
-            vertices[index + N + Nplus1 * N].ox + lambda * h_d_and_n.D.x;
-        vertices[index + N + Nplus1 * N].z =
-            vertices[index + N + Nplus1 * N].oz + lambda * h_d_and_n.D.y;
-
-        vertices[index + N + Nplus1 * N].nx = h_d_and_n.n.x;
-        vertices[index + N + Nplus1 * N].ny = h_d_and_n.n.y;
-        vertices[index + N + Nplus1 * N].nz = h_d_and_n.n.z;
-      }
-      if (n_prime == 0) {
-        vertices[index + N].y = h_d_and_n.h.real();
-
-        vertices[index + N].x = vertices[index + N].ox + lambda * h_d_and_n.D.x;
-        vertices[index + N].z = vertices[index + N].oz + lambda * h_d_and_n.D.y;
-
-        vertices[index + N].nx = h_d_and_n.n.x;
-        vertices[index + N].ny = h_d_and_n.n.y;
-        vertices[index + N].nz = h_d_and_n.n.z;
-      }
-      if (m_prime == 0) {
-        vertices[index + Nplus1 * N].y = h_d_and_n.h.real();
-
-        vertices[index + Nplus1 * N].x =
-            vertices[index + Nplus1 * N].ox + lambda * h_d_and_n.D.x;
-        vertices[index + Nplus1 * N].z =
-            vertices[index + Nplus1 * N].oz + lambda * h_d_and_n.D.y;
-
-        vertices[index + Nplus1 * N].nx = h_d_and_n.n.x;
-        vertices[index + Nplus1 * N].ny = h_d_and_n.n.y;
-        vertices[index + Nplus1 * N].nz = h_d_and_n.n.z;
-      }
-    }
-  }
-}
-
 void cOcean::evaluateWavesFFT(float t) {
   float kx, kz, len, lambda = -1.0f;
   int index, index1;
@@ -418,13 +316,7 @@ void cOcean::evaluateWavesFFT(float t) {
 
 void cOcean::render(float t, glm::vec3 light_pos, glm::mat4 Projection,
                     glm::mat4 View, glm::mat4 Model, bool use_fft) {
-  // static bool eval = false;
-  // if (!use_fft && !eval) {
-  //   eval = true;
-  //   evaluateWaves(t);
-  // } else if (use_fft) {
   evaluateWavesFFT(t);
-  // }
 
   computeWaterGeometry();
   updateWaterGeometry();

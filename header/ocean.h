@@ -20,12 +20,6 @@ struct vertex_ocean {
   GLfloat ox, oy, oz; // original position
 };
 
-struct complex_vector_normal { // structure used with discrete fourier transform
-  Complex h;                   // wave height
-  vec2 D;                      // displacement
-  vec3 n;                      // normal
-};
-
 class cOcean {
 public:
   bool geometry; // flag to render geometry or surface
@@ -63,8 +57,6 @@ public:
   float phillips(int n_prime, int m_prime);   // phillips spectrum
   Complex hTilde_0(int n_prime, int m_prime);
   Complex hTilde(float t, int n_prime, int m_prime);
-  complex_vector_normal h_D_and_n(vec2 x, float t);
-  void evaluateWaves(float t);
   void evaluateWavesFFT(float t);
   void render(float t, glm::vec3 light_pos, glm::mat4 Projection,
               glm::mat4 View, glm::mat4 Model, bool use_fft);
