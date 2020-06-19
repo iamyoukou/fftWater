@@ -1,10 +1,9 @@
 #include "ocean.h"
 
-cOcean::cOcean(const int N, const float A, const vec2 w, const float length,
-               const bool geometry)
-    : g(9.81), geometry(geometry), N(N), Nplus1(N + 1), A(A), w(w),
-      length(length), vertices(0), indices(0), h_tilde(0), h_tilde_slopex(0),
-      h_tilde_slopez(0), h_tilde_dx(0), h_tilde_dz(0), fft(0) {
+cOcean::cOcean(const int N, const float A, const vec2 w, const float length)
+    : g(9.81), N(N), Nplus1(N + 1), A(A), w(w), length(length), vertices(0),
+      indices(0), h_tilde(0), h_tilde_slopex(0), h_tilde_slopez(0),
+      h_tilde_dx(0), h_tilde_dz(0), fft(0) {
   h_tilde = new Complex[N * N];
   h_tilde_slopex = new Complex[N * N];
   h_tilde_slopez = new Complex[N * N];
@@ -14,11 +13,9 @@ cOcean::cOcean(const int N, const float A, const vec2 w, const float length,
   vertices = new vertex_ocean[Nplus1 * Nplus1];
   indices = new unsigned int[Nplus1 * Nplus1 * 10];
 
-  // std::cout << "in ocean" << '\n';
-
   int index;
-
   Complex htilde0, htilde0mk_conj;
+
   for (int m_prime = 0; m_prime < Nplus1; m_prime++) {
     for (int n_prime = 0; n_prime < Nplus1; n_prime++) {
       index = m_prime * Nplus1 + n_prime;
@@ -43,36 +40,17 @@ cOcean::cOcean(const int N, const float A, const vec2 w, const float length,
     }
   }
 
-  // std::cout << "in ocean" << '\n';
-
   indices_count = 0;
   for (int m_prime = 0; m_prime < N; m_prime++) {
     for (int n_prime = 0; n_prime < N; n_prime++) {
       index = m_prime * Nplus1 + n_prime;
 
-      if (geometry) {
-        indices[indices_count++] = index; // lines
-        indices[indices_count++] = index + 1;
-        indices[indices_count++] = index;
-        indices[indices_count++] = index + Nplus1;
-        indices[indices_count++] = index;
-        indices[indices_count++] = index + Nplus1 + 1;
-        if (n_prime == N - 1) {
-          indices[indices_count++] = index + 1;
-          indices[indices_count++] = index + Nplus1 + 1;
-        }
-        if (m_prime == N - 1) {
-          indices[indices_count++] = index + Nplus1;
-          indices[indices_count++] = index + Nplus1 + 1;
-        }
-      } else {
-        indices[indices_count++] = index; // two triangles
-        indices[indices_count++] = index + Nplus1;
-        indices[indices_count++] = index + Nplus1 + 1;
-        indices[indices_count++] = index;
-        indices[indices_count++] = index + Nplus1 + 1;
-        indices[indices_count++] = index + 1;
-      }
+      indices[indices_count++] = index; // two triangles
+      indices[indices_count++] = index + Nplus1;
+      indices[indices_count++] = index + Nplus1 + 1;
+      indices[indices_count++] = index;
+      indices[indices_count++] = index + Nplus1 + 1;
+      indices[indices_count++] = index + 1;
     }
   }
 

@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
   cTimer timer;
 
   // ocean simulator
-  cOcean ocean = cOcean(64, 0.0005f, vec2(0.0f, 32.0f), 64, true);
+  cOcean ocean = cOcean(64, 0.0005f, vec2(0.0f, 32.0f), 64);
 
   // a rough way to solve cursor position initialization problem
   // must call glfwPollEvents once to activate glfwSetCursorPos

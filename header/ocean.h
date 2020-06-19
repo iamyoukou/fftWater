@@ -22,8 +22,6 @@ struct vertex_ocean {
 
 class cOcean {
 public:
-  bool geometry; // flag to render geometry or surface
-
   float g;          // gravity constant
   int N, Nplus1;    // dimension -- N should be a power of 2
   float A;          // phillips spectrum parameter -- affects heights of waves
@@ -48,8 +46,7 @@ public:
 
 protected:
 public:
-  cOcean(const int N, const float A, const vec2 w, const float length,
-         bool geometry);
+  cOcean(const int N, const float A, const vec2 w, const float length);
   ~cOcean();
   void release();
 
