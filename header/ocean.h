@@ -22,7 +22,10 @@ struct vertex_ocean {
 
 class cOcean {
 public:
-  float g;          // gravity constant
+  float g; // gravity constant
+  // why using Nplus1?
+  // for symmetric about (0, 0, 0) ?
+  // for seamless among duplicated areas ?
   int N, Nplus1;    // dimension -- N should be a power of 2
   float A;          // phillips spectrum parameter -- affects heights of waves
   vec2 w;           // wind parameter
@@ -43,6 +46,8 @@ public:
   GLfloat *aWaterVtxs, *aWaterNs;
   int nOfQuads;
   vector<Point> points;
+  vec3 origin;
+  float cellSize;
 
 protected:
 public:
@@ -56,11 +61,13 @@ public:
   Complex hTilde(float t, int n_prime, int m_prime);
   void evaluateWavesFFT(float t);
   void render(float t, glm::vec3 light_pos, glm::mat4 Projection,
-              glm::mat4 View, glm::mat4 Model, bool use_fft);
+              glm::mat4 View, glm::mat4 Model, bool resume);
   void computeWaterGeometry();
   void updateWaterGeometry();
   void drawPoints();
   void drawMesh();
+  vec3 getVertex(int ix, int iz);
+  void computeOriginal();
 };
 
 #endif

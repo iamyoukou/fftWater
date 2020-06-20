@@ -92,3 +92,5 @@ I have modified [Keith Lantz's code](https://github.com/klantz81/ocean-simulatio
 
 # Reference
 [Tessendorf, 2001] Tessendorf, Jerry. "Simulating ocean water." Simulating nature: realistic and interactive techniques. SIGGRAPH 1.2 (2001): 5.
+
+[Ang, 2018] Ang, Nigel, et al. "The technical art of sea of thieves." ACM SIGGRAPH 2018 Talks. 2018. 1-2. ([link](https://dl.acm.org/doi/10.1145/3214745.3214820), including video)

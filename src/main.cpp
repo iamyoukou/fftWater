@@ -21,15 +21,16 @@ Skybox skybox;
 
 bool saveTrigger = false;
 int frameNumber = 0;
+bool simulation = true;
 
 float verticalAngle = -1.71874;
 float horizontalAngle = 2.4934;
 float initialFoV = 45.0f;
 float speed = 25.0f;
 float mouseSpeed = 0.005f;
-float farPlane = 2000.f;
+float nearPlane = 0.01f, farPlane = 2000.f;
 
-vec3 eyePoint = vec3(40.492981, 15.879280, -17.939962);
+vec3 eyePoint = vec3(-27.000000, 15, -16.000000);
 vec3 eyeDirection =
     vec3(sin(verticalAngle) * cos(horizontalAngle), cos(verticalAngle),
          sin(verticalAngle) * sin(horizontalAngle));
@@ -83,16 +84,18 @@ int main(int argc, char *argv[]) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // skybox
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glEnable(GL_CULL_FACE);
     skybox.draw();
 
     // ocean
     glDisable(GL_CULL_FACE);
     ocean.render(timer.elapsed(false), vec3(20, 20, 20), oceanP, oceanV, oceanM,
-                 false);
+                 simulation);
 
     /* render to main screen */
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     // clear framebuffer
     glClearColor(97 / 256.f, 175 / 256.f, 239 / 256.f, 1.0f);
@@ -100,9 +103,82 @@ int main(int argc, char *argv[]) {
 
     glUseProgram(shaderScreenQuad);
 
+    /* calculate the threshold for the condition of underwater */
+    // project the eyePoint onto the ocean surface
+    // calculate which ocean cell it is in
+    vec3 temp = eyePoint;
+    // vec3 tempDir = normalize(vec3(eyeDirection.x, 0, eyeDirection.z));
+    // temp += eyeDirection * 2.f;
+
+    int ix = floor(temp.x / ocean.cellSize);
+    int iz = floor(temp.z / ocean.cellSize);
+
+    vec3 ref(ix * ocean.cellSize, 0, iz * ocean.cellSize);
+
+    // std::cout << "cell index (before): " << to_string(vec2(ix, iz)) << '\n';
+
+    // if eyePoint is over the duplicated area,
+    // transform the indices back to the original area
+    while (ix > ocean.N / 2)
+      ix -= ocean.N;
+    while (ix < -ocean.N / 2)
+      ix += ocean.N;
+    while (iz > ocean.N / 2)
+      iz -= ocean.N;
+    while (iz < -ocean.N / 2)
+      iz += ocean.N;
+
+    // std::cout << "cell index (after): " << to_string(vec2(ix, iz)) << '\n';
+
+    // ix, iz is [- N/2, N/2]
+    // change to [0, N] to access ocean vertices
+    ix += ocean.N / 2;
+    iz += ocean.N / 2;
+    //
+    vec3 A, B, C, D;
+    A = ocean.getVertex(ix, iz);
+    B = ocean.getVertex(ix + 1, iz);
+    C = ocean.getVertex(ix + 1, iz + 1);
+    D = ocean.getVertex(ix, iz + 1);
+    //
+    // vec3 whichVtx = ocean.getVertex(ix, iz);
+    //
+    float alpha = (temp.z - ref.z) / ocean.cellSize;
+    float beta = (temp.x - ref.x) / ocean.cellSize;
+    //
+    float Z1 = (1.f - alpha) * A.y + alpha * D.y;
+    float Z2 = (1.f - alpha) * B.y + alpha * C.y;
+    float Z = (1.f - beta) * Z1 + beta * Z2;
+
+    float threshold = Z;
+    float everage = (A.y + B.y + C.y + D.y) * 0.25;
+
+    // if (simulation) {
+    //   std::cout << "alpha = " << alpha << '\n';
+    //   std::cout << "beta = " << beta << '\n';
+    //
+    //   // std::cout << "whichVtx: " << to_string(whichVtx) << '\n';
+    //   std::cout << "temp: " << to_string(eyePoint) << '\n';
+    //   std::cout << "belongs to: " << to_string(ocean.getVertex(ix, iz)) <<
+    //   '\n'; std::cout << "A: " << to_string(A) << '\n'; std::cout << "B: " <<
+    //   to_string(B) << '\n'; std::cout << "C: " << to_string(C) << '\n';
+    //   std::cout << "D: " << to_string(D) << '\n';
+    //   std::cout << "ref: " << to_string(ref) << '\n';
+    //   // std::cout << '\n';
+    //   // std::cout << "cell index (access): " << to_string(vec2(ix, iz)) <<
+    //   // '\n';
+    //   // std::cout << to_string(ocean.getVertex(ix + 1, iz)) << '\n';
+    //   // std::cout << to_string(ocean.getVertex(ix, iz + 1)) << '\n';
+    //   // std::cout << to_string(ocean.getVertex(ix + 1, iz + 1)) << '\n';
+    //   std::cout << "threshold: " << threshold << '\n';
+    //   std::cout << "everage: " << everage << '\n';
+    //   // std::cout << to_string(ocean.getVertex(5, 17)) << '\n';
+    //   std::cout << '\n';
+    // }
+
     // for underwater scene
-    if (eyePoint.y < -5.f) {
-      glUniform1f(uniAlpha, 0.75f);
+    if (eyePoint.y < threshold) {
+      glUniform1f(uniAlpha, 0.5f);
     } else {
       glUniform1f(uniAlpha, 1.f);
     }
@@ -162,8 +238,8 @@ void initGL() {
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
   // Open a window and create its OpenGL context
-  window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT,
-                            "Dudv water simulation", NULL, NULL);
+  window =
+      glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "FFT ocean", NULL, NULL);
 
   if (window == NULL) {
     std::cout << "Failed to open GLFW window." << std::endl;
@@ -252,8 +328,8 @@ void computeMatricesFromInputs() {
   }
 
   mat4 newV = lookAt(eyePoint, eyePoint + direction, newUp);
-  mat4 newP = perspective(initialFoV, 1.f * WINDOW_WIDTH / WINDOW_HEIGHT, 0.1f,
-                          farPlane);
+  mat4 newP = perspective(initialFoV, 1.f * WINDOW_WIDTH / WINDOW_HEIGHT,
+                          nearPlane, farPlane);
 
   // update for skybox
   glUseProgram(skybox.shader);
@@ -305,6 +381,10 @@ void keyCallback(GLFWwindow *keyWnd, int key, int scancode, int action,
       frameNumber = 0;
       break;
     }
+    case GLFW_KEY_X: {
+      simulation = !simulation;
+      break;
+    }
     default:
       break;
     }
@@ -350,7 +430,7 @@ void initMatrix() {
 
   M = translate(mat4(1.f), vec3(0.f, 0.f, -4.f));
   V = lookAt(eyePoint, eyePoint + eyeDirection, up);
-  P = perspective(initialFoV, 1.f * WINDOW_WIDTH / WINDOW_HEIGHT, 0.01f,
+  P = perspective(initialFoV, 1.f * WINDOW_WIDTH / WINDOW_HEIGHT, nearPlane,
                   farPlane);
 
   // for skybox
