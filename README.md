@@ -84,6 +84,34 @@ and the horizontal scaling `(sx, xz)` is small,
 we will have a stormy ocean.
 Otherwise, we will have a relatively calm ocean.
 
+# Underwater
+
+When the eye point is underwater, mix the frame with a blue-green color
+to obtain an underwater effect.
+
+![underwater](./underwater.gif)
+
+Currently, the condition of underwater doesn't work perfectly.
+Here is the algorithm that I'm using:
+
+- Project the eyePoint onto the original ocean grid at `P`.
+
+- Find the cell to which `P` belongs.
+
+- Based on the relative position of `P` and the corners of the cell,
+calculate the interpolated `P.y`.
+
+- if `eyePoint.y < P.y`, then `isUnderwater = true`.
+
+The problem is that the horizontal position of the ocean changes each frame.
+So projection onto the original grid is not appropriate.
+For example, `cell(n-1, m-1)` may move into `cell(n, m)` due to its horizontal displacement.
+In this case, we should project the eye point onto `cell(n-1, m-1)`.
+However, according to the algorithm above, we project the eye point onto `cell(n, m)`.
+Consequently, we get a wrong `P.y`.
+
+I will try to fix this problem.
+
 # Result
 
 ![output](./output.gif)

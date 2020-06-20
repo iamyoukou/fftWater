@@ -35,11 +35,9 @@ public:
   cFFT *fft; // fast fourier transform
 
   vertex_ocean *vertices;                  // vertices for vertex buffer object
-  unsigned int *indices;                   // indicies for vertex buffer object
-  unsigned int indices_count;              // number of indices to render
   GLuint vboVtxs, vboNs, vbo_indices, vao; // vertex buffer objects
 
-  GLuint glProgram, glShaderV, glShaderF; // shaders
+  GLuint shader; // shaders
   GLint vertex, normal, texture, light_position, projection, view,
       model; // attributes and uniforms
 
@@ -67,7 +65,6 @@ public:
   void drawPoints();
   void drawMesh();
   vec3 getVertex(int ix, int iz);
-  void computeOriginal();
 };
 
 #endif

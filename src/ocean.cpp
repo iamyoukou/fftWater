@@ -2,8 +2,8 @@
 
 cOcean::cOcean(const int N, const float A, const vec2 w, const float length)
     : g(9.81), N(N), Nplus1(N + 1), A(A), w(w), length(length), vertices(0),
-      indices(0), h_tilde(0), h_tilde_slopex(0), h_tilde_slopez(0),
-      h_tilde_dx(0), h_tilde_dz(0), fft(0) {
+      h_tilde(0), h_tilde_slopex(0), h_tilde_slopez(0), h_tilde_dx(0),
+      h_tilde_dz(0), fft(0) {
   h_tilde = new Complex[N * N];
   h_tilde_slopex = new Complex[N * N];
   h_tilde_slopez = new Complex[N * N];
@@ -11,7 +11,6 @@ cOcean::cOcean(const int N, const float A, const vec2 w, const float length)
   h_tilde_dz = new Complex[N * N];
   fft = new cFFT(N);
   vertices = new vertex_ocean[Nplus1 * Nplus1];
-  indices = new unsigned int[Nplus1 * Nplus1 * 10];
 
   int index;
   Complex htilde0, htilde0mk_conj;
@@ -43,20 +42,6 @@ cOcean::cOcean(const int N, const float A, const vec2 w, const float length)
   origin = vec3(vertices[0].x, vertices[0].y, vertices[0].z);
   cellSize = length / float(N);
 
-  indices_count = 0;
-  for (int m_prime = 0; m_prime < N; m_prime++) {
-    for (int n_prime = 0; n_prime < N; n_prime++) {
-      index = m_prime * Nplus1 + n_prime;
-
-      indices[indices_count++] = index; // two triangles
-      indices[indices_count++] = index + Nplus1;
-      indices[indices_count++] = index + Nplus1 + 1;
-      indices[indices_count++] = index;
-      indices[indices_count++] = index + Nplus1 + 1;
-      indices[indices_count++] = index + 1;
-    }
-  }
-
   // 2 triangles per quad
   // 3 vertices per triangle
   // 3 GLfloat per vertex
@@ -87,13 +72,13 @@ cOcean::cOcean(const int N, const float A, const vec2 w, const float length)
   glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(1);
 
-  glProgram = buildShader("./shader/vsOcean.glsl", "./shader/fsOcean.glsl");
-  // glProgram = buildShader("./shader/vsPoint.glsl", "./shader/fsPoint.glsl");
+  shader = buildShader("./shader/vsOcean.glsl", "./shader/fsOcean.glsl");
+  // shader = buildShader("./shader/vsPoint.glsl", "./shader/fsPoint.glsl");
 
-  // light_position = myGetUniformLocation(glProgram, "light_position");
-  projection = myGetUniformLocation(glProgram, "P");
-  view = myGetUniformLocation(glProgram, "V");
-  model = myGetUniformLocation(glProgram, "M");
+  // light_position = myGetUniformLocation(shader, "light_position");
+  projection = myGetUniformLocation(shader, "P");
+  view = myGetUniformLocation(shader, "V");
+  model = myGetUniformLocation(shader, "M");
 }
 
 cOcean::~cOcean() {
@@ -111,8 +96,6 @@ cOcean::~cOcean() {
     delete fft;
   if (vertices)
     delete[] vertices;
-  if (indices)
-    delete[] indices;
 }
 
 void cOcean::release() {
@@ -230,12 +213,12 @@ void cOcean::evaluateWavesFFT(float t) {
       vertices[index1].y = h_tilde[index].real();
 
       // displacement
-      // h_tilde_dx[index] = h_tilde_dx[index] * double(sign);
-      // h_tilde_dz[index] = h_tilde_dz[index] * double(sign);
-      // vertices[index1].x =
-      //     vertices[index1].ox + h_tilde_dx[index].real() * lambda;
-      // vertices[index1].z =
-      //     vertices[index1].oz + h_tilde_dz[index].real() * lambda;
+      h_tilde_dx[index] = h_tilde_dx[index] * double(sign);
+      h_tilde_dz[index] = h_tilde_dz[index] * double(sign);
+      vertices[index1].x =
+          vertices[index1].ox + h_tilde_dx[index].real() * lambda;
+      vertices[index1].z =
+          vertices[index1].oz + h_tilde_dz[index].real() * lambda;
 
       // normal
       h_tilde_slopex[index] = h_tilde_slopex[index] * double(sign);
@@ -299,7 +282,7 @@ void cOcean::render(float t, glm::vec3 light_pos, glm::mat4 Projection,
   updateWaterGeometry();
 
   // update transform matrix
-  glUseProgram(glProgram);
+  glUseProgram(shader);
   glUniform3f(light_position, light_pos.x, light_pos.y, light_pos.z);
   glUniformMatrix4fv(projection, 1, GL_FALSE, glm::value_ptr(Projection));
   glUniformMatrix4fv(view, 1, GL_FALSE, glm::value_ptr(View));
@@ -322,19 +305,6 @@ void cOcean::render(float t, glm::vec3 light_pos, glm::mat4 Projection,
       glDrawArrays(GL_TRIANGLES, 0, nOfQuads * 2 * 3);
     }
   }
-
-  // test
-  // computeOriginal();
-  // for (int j = 0; j < 5; j++) {
-  //   for (int i = 0; i < 5; i++) {
-  //     Model = glm::scale(glm::mat4(1.0f), glm::vec3(1.f, 1.f, 1.f));
-  //     Model = glm::translate(Model, glm::vec3(length * i, 0, length * -j));
-  //     glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(Model));
-  //
-  //     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-  //     glDrawArrays(GL_TRIANGLES, 0, nOfQuads * 2 * 3);
-  //   }
-  // }
 
   // single
   // glBindVertexArray(vao);
@@ -527,117 +497,6 @@ vec3 cOcean::getVertex(int ix, int iz) {
   vec3 vtx(vertices[idx].x, vertices[idx].y, vertices[idx].z);
 
   return vtx;
-}
-
-void cOcean::computeOriginal() {
-  // geometry discription for opengl
-  int idxQuad = 0;
-
-  for (size_t i = 0; i < N; i++) {
-    for (size_t j = 0; j < N; j++) {
-      // note: there are Nplus1 vertices in a row and column
-      // note: be careful, the order of indices
-      // may result in a back-facing triangle
-      int idx0 = i * Nplus1 + j;
-      int idx1 = idx0 + 1;
-      int idx2 = idx1 + Nplus1;
-      int idx3 = idx2 - 1;
-
-      // the first triangle in a quad
-      // vertex position
-      aWaterVtxs[idxQuad * 18 + 0] = vertices[idx2].ox;
-      aWaterVtxs[idxQuad * 18 + 1] = vertices[idx2].oy;
-      aWaterVtxs[idxQuad * 18 + 2] = vertices[idx2].oz;
-
-      aWaterVtxs[idxQuad * 18 + 3] = vertices[idx1].ox;
-      aWaterVtxs[idxQuad * 18 + 4] = vertices[idx1].oy;
-      aWaterVtxs[idxQuad * 18 + 5] = vertices[idx1].oz;
-
-      aWaterVtxs[idxQuad * 18 + 6] = vertices[idx0].ox;
-      aWaterVtxs[idxQuad * 18 + 7] = vertices[idx0].oy;
-      aWaterVtxs[idxQuad * 18 + 8] = vertices[idx0].oz;
-
-      // std::cout << "idx0 = " << idx0 << '\n';
-      // std::cout << "triangle 1: " << '\n';
-      // std::cout << vertices[idx0].x << ", " << vertices[idx0].y << ", "
-      //           << vertices[idx0].z << '\n';
-      // std::cout << vertices[idx1].x << ", " << vertices[idx1].y << ", "
-      //           << vertices[idx1].z << '\n';
-      // std::cout << vertices[idx2].x << ", " << vertices[idx2].y << ", "
-      //           << vertices[idx2].z << '\n';
-
-      // vertex normal
-      aWaterNs[idxQuad * 18 + 0] = vertices[idx2].nx;
-      aWaterNs[idxQuad * 18 + 1] = vertices[idx2].ny;
-      aWaterNs[idxQuad * 18 + 2] = vertices[idx2].nz;
-
-      aWaterNs[idxQuad * 18 + 3] = vertices[idx1].nx;
-      aWaterNs[idxQuad * 18 + 4] = vertices[idx1].ny;
-      aWaterNs[idxQuad * 18 + 5] = vertices[idx1].nz;
-
-      aWaterNs[idxQuad * 18 + 6] = vertices[idx0].nx;
-      aWaterNs[idxQuad * 18 + 7] = vertices[idx0].ny;
-      aWaterNs[idxQuad * 18 + 8] = vertices[idx0].nz;
-
-      // the second triangle in a quad
-      // vertex position
-      aWaterVtxs[idxQuad * 18 + 9] = vertices[idx3].ox;
-      aWaterVtxs[idxQuad * 18 + 10] = vertices[idx3].oy;
-      aWaterVtxs[idxQuad * 18 + 11] = vertices[idx3].oz;
-
-      aWaterVtxs[idxQuad * 18 + 12] = vertices[idx2].ox;
-      aWaterVtxs[idxQuad * 18 + 13] = vertices[idx2].oy;
-      aWaterVtxs[idxQuad * 18 + 14] = vertices[idx2].oz;
-
-      aWaterVtxs[idxQuad * 18 + 15] = vertices[idx0].ox;
-      aWaterVtxs[idxQuad * 18 + 16] = vertices[idx0].oy;
-      aWaterVtxs[idxQuad * 18 + 17] = vertices[idx0].oz;
-
-      // std::cout << "triangle 2: " << '\n';
-      // std::cout << vertices[idx0].x << ", " << vertices[idx0].y << ", "
-      //           << vertices[idx0].z << '\n';
-      // std::cout << vertices[idx2].x << ", " << vertices[idx2].y << ", "
-      //           << vertices[idx2].z << '\n';
-      // std::cout << vertices[idx3].x << ", " << vertices[idx3].y << ", "
-      //           << vertices[idx3].z << '\n';
-      // std::cout << '\n';
-
-      // vertex normal
-      aWaterNs[idxQuad * 18 + 9] = vertices[idx3].nx;
-      aWaterNs[idxQuad * 18 + 10] = vertices[idx3].ny;
-      aWaterNs[idxQuad * 18 + 11] = vertices[idx3].nz;
-
-      aWaterNs[idxQuad * 18 + 12] = vertices[idx2].nx;
-      aWaterNs[idxQuad * 18 + 13] = vertices[idx2].ny;
-      aWaterNs[idxQuad * 18 + 14] = vertices[idx2].nz;
-
-      aWaterNs[idxQuad * 18 + 15] = vertices[idx0].nx;
-      aWaterNs[idxQuad * 18 + 16] = vertices[idx0].ny;
-      aWaterNs[idxQuad * 18 + 17] = vertices[idx0].nz;
-
-      idxQuad++;
-    }
-  }
-
-  glBindVertexArray(vao);
-
-  // vbo for vertex position
-  glBindBuffer(GL_ARRAY_BUFFER, vboVtxs);
-  // buffer orphaning
-  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * nOfQuads * 2 * 3 * 3, NULL,
-               GL_STREAM_DRAW);
-  // write data
-  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * nOfQuads * 2 * 3 * 3,
-               aWaterVtxs, GL_STREAM_DRAW);
-
-  // vbo for vertex normal
-  glBindBuffer(GL_ARRAY_BUFFER, vboNs);
-  // buffer orphaning
-  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * nOfQuads * 2 * 3 * 3, NULL,
-               GL_STREAM_DRAW);
-  // write data
-  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * nOfQuads * 2 * 3 * 3,
-               aWaterNs, GL_STREAM_DRAW);
 }
 
 float uniformRandomVariable() {
