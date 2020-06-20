@@ -103,91 +103,14 @@ int main(int argc, char *argv[]) {
 
     glUseProgram(shaderScreenQuad);
 
-    /* calculate the threshold for the condition of underwater */
-    // // project the eyePoint onto the ocean surface
-    // // calculate which ocean cell it is in
-    // vec3 temp = eyePoint;
-    // // vec3 tempDir = normalize(vec3(eyeDirection.x, 0, eyeDirection.z));
-    // // temp += eyeDirection * 2.f;
-    //
-    // int ix = floor(temp.x / ocean.cellSize);
-    // int iz = floor(temp.z / ocean.cellSize);
-    //
-    // vec3 ref(ix * ocean.cellSize, 0, iz * ocean.cellSize);
-    //
-    // // std::cout << "cell index (before): " << to_string(vec2(ix, iz)) <<
-    // '\n';
-    //
-    // // if eyePoint is over the duplicated area,
-    // // transform the indices back to the original area
-    // while (ix > ocean.N / 2)
-    //   ix -= ocean.N;
-    // while (ix < -ocean.N / 2)
-    //   ix += ocean.N;
-    // while (iz > ocean.N / 2)
-    //   iz -= ocean.N;
-    // while (iz < -ocean.N / 2)
-    //   iz += ocean.N;
-    //
-    // // std::cout << "cell index (after): " << to_string(vec2(ix, iz)) <<
-    // '\n';
-    //
-    // // ix, iz is [- N/2, N/2]
-    // // change to [0, N] to access ocean vertices
-    // ix += ocean.N / 2;
-    // iz += ocean.N / 2;
-    // //
-    // vec3 A, B, C, D;
-    // A = ocean.getVertex(ix, iz);
-    // B = ocean.getVertex(ix + 1, iz);
-    // C = ocean.getVertex(ix + 1, iz + 1);
-    // D = ocean.getVertex(ix, iz + 1);
-    // //
-    // // vec3 whichVtx = ocean.getVertex(ix, iz);
-    // //
-    // float alpha = (temp.z - ref.z) / ocean.cellSize;
-    // float beta = (temp.x - ref.x) / ocean.cellSize;
-    // //
-    // float Z1 = (1.f - alpha) * A.y + alpha * D.y;
-    // float Z2 = (1.f - alpha) * B.y + alpha * C.y;
-    // float Z = (1.f - beta) * Z1 + beta * Z2;
-    //
-    // float threshold = Z;
-    // float everage = (A.y + B.y + C.y + D.y) * 0.25;
-    //
-    // // if (simulation) {
-    // //   std::cout << "alpha = " << alpha << '\n';
-    // //   std::cout << "beta = " << beta << '\n';
-    // //
-    // //   // std::cout << "whichVtx: " << to_string(whichVtx) << '\n';
-    // //   std::cout << "temp: " << to_string(eyePoint) << '\n';
-    // //   std::cout << "belongs to: " << to_string(ocean.getVertex(ix, iz)) <<
-    // //   '\n'; std::cout << "A: " << to_string(A) << '\n'; std::cout << "B: "
-    // <<
-    // //   to_string(B) << '\n'; std::cout << "C: " << to_string(C) << '\n';
-    // //   std::cout << "D: " << to_string(D) << '\n';
-    // //   std::cout << "ref: " << to_string(ref) << '\n';
-    // //   // std::cout << '\n';
-    // //   // std::cout << "cell index (access): " << to_string(vec2(ix, iz))
-    // <<
-    //     //   // '\n';
-    //     //   // std::cout << to_string(ocean.getVertex(ix + 1, iz)) << '\n';
-    //     //   // std::cout << to_string(ocean.getVertex(ix, iz + 1)) << '\n';
-    //     //   // std::cout << to_string(ocean.getVertex(ix + 1, iz + 1)) <<
-    //     '\n';
-    //     //   std::cout << "threshold: " << threshold << '\n';
-    //     //   std::cout << "everage: " << everage << '\n';
-    //     //   // std::cout << to_string(ocean.getVertex(5, 17)) << '\n';
-    //     //   std::cout << '\n';
-    //     // }
-    //
-    //     // for underwater scene
-    //     if (eyePoint.y < threshold) {
-    //   glUniform1f(uniAlpha, 0.5f);
-    // }
-    // else {
-    //   glUniform1f(uniAlpha, 1.f);
-    // }
+    float threshold = 0.f;
+
+    // for underwater scene
+    if (eyePoint.y < threshold) {
+      glUniform1f(uniAlpha, 0.5f);
+    } else {
+      glUniform1f(uniAlpha, 1.f);
+    }
 
     glBindVertexArray(vaoScreenQuad);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -298,6 +221,9 @@ void computeMatricesFromInputs() {
   horizontalAngle += mouseSpeed * float(xpos - WINDOW_WIDTH / 2.f);
   verticalAngle += mouseSpeed * float(-ypos + WINDOW_HEIGHT / 2.f);
 
+  // restrict viewing angles
+  verticalAngle = glm::clamp(verticalAngle, -2.0f, -0.75f);
+
   // Direction : Spherical coordinates to Cartesian coordinates conversion
   vec3 direction =
       vec3(sin(verticalAngle) * cos(horizontalAngle), cos(verticalAngle),
@@ -310,29 +236,33 @@ void computeMatricesFromInputs() {
   // new up vector
   vec3 newUp = cross(right, direction);
 
+  // restrict movements, can only move horizontally
+  vec3 forwardDir = normalize(vec3(direction.x, 0, direction.z));
+  vec3 rightDir = normalize(vec3(right.x, 0, right.z));
+
   // Move forward
   if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-    eyePoint += direction * deltaTime * speed;
+    eyePoint += forwardDir * deltaTime * speed;
   }
   // Move backward
   if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-    eyePoint -= direction * deltaTime * speed;
+    eyePoint -= forwardDir * deltaTime * speed;
   }
   // Strafe right
   if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-    eyePoint += right * deltaTime * speed;
+    eyePoint += rightDir * deltaTime * speed;
   }
   // Strafe left
   if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-    eyePoint -= right * deltaTime * speed;
+    eyePoint -= rightDir * deltaTime * speed;
   }
   // dive
   if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
-    eyePoint -= newUp * deltaTime * speed;
+    eyePoint = vec3(eyePoint.x, -15.f, eyePoint.z);
   }
   // rise
   if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS) {
-    eyePoint += newUp * deltaTime * speed;
+    eyePoint = vec3(eyePoint.x, 15.f, eyePoint.z);
   }
 
   mat4 newV = lookAt(eyePoint, eyePoint + direction, newUp);

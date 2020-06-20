@@ -7,3 +7,4 @@ result/
 *.o
 palette.png
 video/
+src/backup.cpp

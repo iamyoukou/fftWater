@@ -12,6 +12,8 @@ cOcean::cOcean(const int N, const float A, const vec2 w, const float length)
   fft = new cFFT(N);
   vertices = new vertex_ocean[Nplus1 * Nplus1];
 
+  // heightMap = FreeImage_Allocate(N * 10, N * 10, 24);
+
   int index;
   Complex htilde0, htilde0mk_conj;
 
@@ -40,6 +42,7 @@ cOcean::cOcean(const int N, const float A, const vec2 w, const float length)
   }
 
   origin = vec3(vertices[0].x, vertices[0].y, vertices[0].z);
+  // border = origin + vec3(length);
   cellSize = length / float(N);
 
   // 2 triangles per quad
@@ -281,67 +284,6 @@ void cOcean::render(float t, glm::vec3 light_pos, glm::mat4 Projection,
   computeWaterGeometry();
   updateWaterGeometry();
 
-  // create height map
-  // a little expensive
-  FIBITMAP *heightMap = FreeImage_Allocate(N * 10, N * 10, 24);
-  RGBQUAD color;
-
-  if (!heightMap) {
-    std::cout << "FreeImage: Cannot allocate image." << '\n';
-    exit(EXIT_FAILURE);
-  }
-
-  int nOfInter = 10; // # of interpolation points between two vertices.
-
-  // note: the difference of query order between image and vertices[.]
-  // image: top-down, left-right
-  // vertices: bottom-up, left-right
-  for (int r = 0; r < N; r++) {
-    for (int c = 0; c < N; c++) {
-      int idx0 = r * Nplus1 + c; // query vertices[.]
-      int idx1 = idx0 + 1;
-      int idx2 = idx1 + Nplus1;
-      int idx3 = idx2 - 1;
-
-      // a local quad
-      for (size_t k = 0; k < nOfInter; k++) {
-        for (size_t l = 0; l < nOfInter; l++) {
-          float alpha = k * 0.1f;
-          float beta = l * 0.1f;
-
-          float Ay = vertices[idx0].y;
-          float By = vertices[idx1].y;
-          float Cy = vertices[idx2].y;
-          float Dy = vertices[idx3].y;
-
-          float E1y = (1 - alpha) * Ay + alpha * Dy;
-          float E2y = (1 - alpha) * By + alpha * Cy;
-          float Ey = (1 - beta) * E1y + beta * E2y;
-
-          color.rgbRed = abs(Ey) * 100.0;
-          // std::cout << abs(Ey) << '\n';
-
-          color.rgbGreen = (Ey < 0) ? 0 : 1;
-          color.rgbBlue = 0;
-
-          FreeImage_SetPixelColor(heightMap, c * nOfInter + l,
-                                  (N - 1 - r) * nOfInter + (nOfInter - 1 - k),
-                                  &color);
-        }
-      }
-    }
-  }
-
-  string dir = "./result/heightMap";
-  // zero padding
-  // e.g. "heightMap0001.bmp"
-  string num = to_string(frameN);
-  num = string(4 - num.length(), '0') + num;
-  string output = dir + num + ".png";
-
-  if (FreeImage_Save(FIF_PNG, heightMap, output.c_str(), 0))
-    cout << output << " saved!" << endl;
-
   // update transform matrix
   glUseProgram(shader);
   glUniform3f(light_position, light_pos.x, light_pos.y, light_pos.z);
@@ -359,7 +301,7 @@ void cOcean::render(float t, glm::vec3 light_pos, glm::mat4 Projection,
       // decrease the difference between scaleY and (scaleX, scaleZ)
       // e.g. vec3(10.f, 10.f, 10.f)
       // on the other hand, (10.f, 2.5f, 10.f) gives a relatively calm ocean
-      Model = glm::scale(glm::mat4(1.0f), glm::vec3(1.f, 1.f, 1.f));
+      Model = glm::scale(glm::mat4(1.0f), glm::vec3(10.f, 2.5f, 10.f));
       Model = glm::translate(Model, glm::vec3(length * i, 0, length * -j));
       glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(Model));
 
@@ -553,7 +495,6 @@ void cOcean::updateWaterGeometry() {
 vec3 cOcean::getVertex(int ix, int iz) {
   // there are Nplus1 * Nplus1 vertices
   int idx = iz * Nplus1 + ix;
-  // std::cout << "idx = " << idx << '\n';
 
   vec3 vtx(vertices[idx].x, vertices[idx].y, vertices[idx].z);
 

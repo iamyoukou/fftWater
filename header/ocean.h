@@ -44,8 +44,15 @@ public:
   GLfloat *aWaterVtxs, *aWaterNs;
   int nOfQuads;
   vector<Point> points;
+
+  // for a xz-plane
+  // origin: left-bottom
+  // border: right-top
   vec3 origin;
+  // vec3 border;
+
   float cellSize;
+  // FIBITMAP *heightMap;
 
 protected:
 public:
