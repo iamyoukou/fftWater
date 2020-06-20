@@ -49,6 +49,7 @@ GLfloat vtxsScreenQuad[] = {
 };
 
 vec4 underwaterColor(0.0, 0.65, 0.75, 1.0);
+bool isRising = false, isDiving = false;
 
 int main(int argc, char *argv[]) {
   initGL();
@@ -103,10 +104,8 @@ int main(int argc, char *argv[]) {
 
     glUseProgram(shaderScreenQuad);
 
-    float threshold = 0.f;
-
     // for underwater scene
-    if (eyePoint.y < threshold) {
+    if (eyePoint.y < 0.f) {
       glUniform1f(uniAlpha, 0.5f);
     } else {
       glUniform1f(uniAlpha, 1.f);
@@ -257,12 +256,33 @@ void computeMatricesFromInputs() {
     eyePoint -= rightDir * deltaTime * speed;
   }
   // dive
-  if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
-    eyePoint = vec3(eyePoint.x, -15.f, eyePoint.z);
+  if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS && !isDiving) {
+    isDiving = true;
+    isRising = false;
   }
   // rise
-  if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS) {
-    eyePoint = vec3(eyePoint.x, 15.f, eyePoint.z);
+  if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS && !isRising) {
+    isDiving = false;
+    isRising = true;
+  }
+
+  // smoothly dive
+  if (isDiving && eyePoint.y > -20.f) {
+    eyePoint.y -= 2.f;
+
+    if (eyePoint.y < -20.f) {
+      isDiving = false;
+      eyePoint.y = -20.f;
+    }
+  }
+  // smoothly rise
+  else if (isRising && eyePoint.y < 15.f) {
+    eyePoint.y += 2.f;
+
+    if (eyePoint.y > 15.f) {
+      isRising = false;
+      eyePoint.y = 15.f;
+    }
   }
 
   mat4 newV = lookAt(eyePoint, eyePoint + direction, newUp);

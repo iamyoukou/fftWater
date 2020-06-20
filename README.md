@@ -89,34 +89,23 @@ Otherwise, we will have a relatively calm ocean.
 When the eye point is underwater, mix the frame with a blue-green color
 to obtain an underwater effect.
 
+This can be achieved by using the [post-processsing](https://en.wikibooks.org/wiki/OpenGL_Programming/Post-Processing) of OpenGL,
+and `eyePoint.y < threshold` is used as the condition of underwater.
+
+To avoid the artifact when `eyePoint.y` is near the ocean surface,
+it is better to set a diving/rising area `[-someValue, someValue]`.
+Always keep `eyePoint.y` outside of this area.
+When diving or rising, quickly go through this area.
+This strategy can make the artifact unnoticeable.
+
 ![underwater](./underwater.gif)
-
-Currently, the condition of underwater doesn't work perfectly.
-Here is the algorithm that I'm using:
-
-- Project the eyePoint onto the original ocean grid at `P`.
-
-- Find the cell to which `P` belongs.
-
-- Based on the relative position of `P` and the corners of the cell,
-calculate the interpolated `P.y`.
-
-- if `eyePoint.y < P.y`, then `isUnderwater = true`.
-
-The problem is that the horizontal position of the ocean changes each frame.
-So projection onto the original grid is not appropriate.
-For example, `cell(n-1, m-1)` may move into `cell(n, m)` due to its horizontal displacement.
-In this case, we should project the eye point onto `cell(n-1, m-1)`.
-However, according to the algorithm above, we project the eye point onto `cell(n, m)`.
-Consequently, we get a wrong `P.y`.
-
-I will try to fix this problem.
 
 # Result
 
+I have modified [Keith Lantz's code](https://github.com/klantz81/ocean-simulation/tree/master/src) and it can be run on `OSX` now.
+
 ![output](./output.gif)
 
-I have modified [Keith Lantz's code](https://github.com/klantz81/ocean-simulation/tree/master/src) and it can be run on `OSX` now.
 
 # Reference
 [Tessendorf, 2001] Tessendorf, Jerry. "Simulating ocean water." Simulating nature: realistic and interactive techniques. SIGGRAPH 1.2 (2001): 5.
