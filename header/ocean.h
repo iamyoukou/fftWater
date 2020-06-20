@@ -59,7 +59,7 @@ public:
   Complex hTilde(float t, int n_prime, int m_prime);
   void evaluateWavesFFT(float t);
   void render(float t, glm::vec3 light_pos, glm::mat4 Projection,
-              glm::mat4 View, glm::mat4 Model, bool resume);
+              glm::mat4 View, glm::mat4 Model, bool resume, int frameN);
   void computeWaterGeometry();
   void updateWaterGeometry();
   void drawPoints();
