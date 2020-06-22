@@ -55,9 +55,9 @@ void ScreenQuad::initBuffer() {
   glGenFramebuffers(1, &fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, fbo);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         fbo, 0);
+                         tbo, 0);
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                            GL_RENDERBUFFER, fbo);
+                            GL_RENDERBUFFER, rboDepth);
 
   GLenum status;
   if ((status = glCheckFramebufferStatus(GL_FRAMEBUFFER)) !=

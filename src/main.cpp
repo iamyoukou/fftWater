@@ -8,11 +8,7 @@ using namespace std;
 
 void initGL();
 void initOther();
-void initShader();
 void initMatrix();
-void initUniform();
-void initSkybox();
-void initScreenQuad();
 void releaseResource();
 
 void computeMatricesFromInputs();
@@ -41,31 +37,16 @@ vec3 eyeDirection =
 vec3 up = vec3(0.f, 1.f, 0.f);
 
 mat4 model, view, projection;
-
-/* for underwater effect */
-GLuint fboScreenQuad, tboScreenQuad, vaoScreenQuad;
-GLuint vboScreenQuad, rboDepthScreenQuad;
-GLuint shaderScreenQuad;
-GLint uniScreenQuadTex, uniAlpha, uniBaseColor;
-
-GLfloat vtxsScreenQuad[] = {
-    -1, -1, 1, -1, -1, 1, 1, 1,
-};
-
-vec4 underwaterColor(0.0, 0.65, 0.75, 1.0);
 bool isRising = false, isDiving = false;
 
 int main(int argc, char *argv[]) {
   initGL();
   initOther();
-  initShader();
   initMatrix();
-  initUniform();
-  initScreenQuad();
 
   skybox = new Skybox();
 
-  // screenQuad = new ScreenQuad();
+  screenQuad = new ScreenQuad();
 
   cTimer timer;
 
@@ -84,7 +65,7 @@ int main(int argc, char *argv[]) {
     computeMatricesFromInputs();
 
     /* render to framebuffer */
-    glBindFramebuffer(GL_FRAMEBUFFER, fboScreenQuad);
+    glBindFramebuffer(GL_FRAMEBUFFER, screenQuad->fbo);
 
     // clear framebuffer
     glClearColor(97 / 256.f, 175 / 256.f, 239 / 256.f, 1.0f);
@@ -108,18 +89,7 @@ int main(int argc, char *argv[]) {
     glClearColor(97 / 256.f, 175 / 256.f, 239 / 256.f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glUseProgram(shaderScreenQuad);
-
-    // for underwater scene
-    if (eyePoint.y < 0.f) {
-      glUniform1f(uniAlpha, 0.5f);
-    } else {
-      glUniform1f(uniAlpha, 1.f);
-    }
-
-    glBindVertexArray(vaoScreenQuad);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    // screenQuad->draw(eyePoint);
+    screenQuad->draw(eyePoint);
 
     // refresh frame
     glfwSwapBuffers(window);
@@ -337,24 +307,6 @@ void keyCallback(GLFWwindow *keyWnd, int key, int scancode, int action,
   }
 }
 
-void initShader() {
-  shaderScreenQuad =
-      buildShader("./shader/vsScreenQuad.glsl", "./shader/fsScreenQuad.glsl");
-}
-
-void initUniform() {
-  /* Screen quad */
-  glUseProgram(shaderScreenQuad);
-
-  uniScreenQuadTex = myGetUniformLocation(shaderScreenQuad, "tex");
-  uniAlpha = myGetUniformLocation(shaderScreenQuad, "alpha");
-  uniBaseColor = myGetUniformLocation(shaderScreenQuad, "baseColor");
-
-  glUniform1i(uniScreenQuadTex, 10);
-  glUniform1f(uniAlpha, 1.f);
-  glUniform4fv(uniBaseColor, 1, value_ptr(underwaterColor));
-}
-
 void initMatrix() {
   model = translate(mat4(1.f), vec3(0.f, 0.f, -4.f));
   view = lookAt(eyePoint, eyePoint + eyeDirection, up);
@@ -370,56 +322,10 @@ void initOther() {
   FreeImage_Initialise(true);
 }
 
-void initScreenQuad() {
-  /* Texture */
-  glActiveTexture(GL_TEXTURE0 + 10);
-  glGenTextures(1, &tboScreenQuad);
-  glBindTexture(GL_TEXTURE_2D, tboScreenQuad);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  // On OSX, must use WINDOW_WIDTH * 2 and WINDOW_HEIGHT * 2, don't know why
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WINDOW_WIDTH * 2, WINDOW_HEIGHT * 2,
-               0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-
-  /* Depth buffer */
-  glGenRenderbuffers(1, &rboDepthScreenQuad);
-  glBindRenderbuffer(GL_RENDERBUFFER, rboDepthScreenQuad);
-  // On OSX, must use WINDOW_WIDTH * 2 and WINDOW_HEIGHT * 2, don't know why
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, WINDOW_WIDTH * 2,
-                        WINDOW_HEIGHT * 2);
-
-  /* Framebuffer to link everything together */
-  glGenFramebuffers(1, &fboScreenQuad);
-  glBindFramebuffer(GL_FRAMEBUFFER, fboScreenQuad);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         fboScreenQuad, 0);
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                            GL_RENDERBUFFER, fboScreenQuad);
-
-  GLenum status;
-  if ((status = glCheckFramebufferStatus(GL_FRAMEBUFFER)) !=
-      GL_FRAMEBUFFER_COMPLETE) {
-    fprintf(stderr, "glCheckFramebufferStatus: error %u", status);
-    exit(EXIT_FAILURE);
-  }
-
-  // screen quad
-  glGenVertexArrays(1, &vaoScreenQuad);
-  glBindVertexArray(vaoScreenQuad);
-
-  glGenBuffers(1, &vboScreenQuad);
-  glBindBuffer(GL_ARRAY_BUFFER, vboScreenQuad);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 8 * 2, vtxsScreenQuad,
-               GL_STATIC_DRAW);
-  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
-  glEnableVertexAttribArray(0);
-}
-
 void releaseResource() {
   delete ocean;
   delete skybox;
+  delete screenQuad;
 
   glfwTerminate();
   FreeImage_DeInitialise();
