@@ -1,6 +1,7 @@
 #include "common.h"
 #include "ocean.h"
 #include "skybox.h"
+#include "screenQuad.h"
 
 using namespace glm;
 using namespace std;
@@ -20,6 +21,7 @@ void keyCallback(GLFWwindow *, int, int, int, int);
 GLFWwindow *window;
 Skybox *skybox;
 cOcean *ocean;
+ScreenQuad *screenQuad;
 
 bool saveTrigger = false;
 int frameNumber = 0;
@@ -38,7 +40,6 @@ vec3 eyeDirection =
          sin(verticalAngle) * sin(horizontalAngle));
 vec3 up = vec3(0.f, 1.f, 0.f);
 
-mat4 oceanM, oceanV, oceanP;
 mat4 model, view, projection;
 
 /* for underwater effect */
@@ -63,6 +64,8 @@ int main(int argc, char *argv[]) {
   initScreenQuad();
 
   skybox = new Skybox();
+
+  // screenQuad = new ScreenQuad();
 
   cTimer timer;
 
@@ -116,6 +119,7 @@ int main(int argc, char *argv[]) {
 
     glBindVertexArray(vaoScreenQuad);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    // screenQuad->draw(eyePoint);
 
     // refresh frame
     glfwSwapBuffers(window);
@@ -380,8 +384,8 @@ void initScreenQuad() {
                0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
   /* Depth buffer */
-  glGenRenderbuffers(1, &tboScreenQuad);
-  glBindRenderbuffer(GL_RENDERBUFFER, tboScreenQuad);
+  glGenRenderbuffers(1, &rboDepthScreenQuad);
+  glBindRenderbuffer(GL_RENDERBUFFER, rboDepthScreenQuad);
   // On OSX, must use WINDOW_WIDTH * 2 and WINDOW_HEIGHT * 2, don't know why
   glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, WINDOW_WIDTH * 2,
                         WINDOW_HEIGHT * 2);
@@ -390,9 +394,9 @@ void initScreenQuad() {
   glGenFramebuffers(1, &fboScreenQuad);
   glBindFramebuffer(GL_FRAMEBUFFER, fboScreenQuad);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         tboScreenQuad, 0);
+                         fboScreenQuad, 0);
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                            GL_RENDERBUFFER, tboScreenQuad);
+                            GL_RENDERBUFFER, fboScreenQuad);
 
   GLenum status;
   if ((status = glCheckFramebufferStatus(GL_FRAMEBUFFER)) !=
@@ -407,7 +411,7 @@ void initScreenQuad() {
 
   glGenBuffers(1, &vboScreenQuad);
   glBindBuffer(GL_ARRAY_BUFFER, vboScreenQuad);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vtxsScreenQuad), vtxsScreenQuad,
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 8 * 2, vtxsScreenQuad,
                GL_STATIC_DRAW);
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(0);

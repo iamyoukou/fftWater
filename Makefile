@@ -15,7 +15,7 @@ SRC_DIR=/Users/YJ-work/cpp/myGL_glfw/fftWater/src
 
 all: main test
 
-main: main.o fft.o timer.o common.o ocean.o skybox.o
+main: main.o fft.o timer.o common.o ocean.o skybox.o screenQuad.o
 	$(CXX) $(LIBS) $^ -o $@
 
 test: test.o
@@ -40,6 +40,9 @@ ocean.o: $(SRC_DIR)/ocean.cpp
 	$(CXX) -c $(INCS) $^ -o $@
 
 skybox.o: $(SRC_DIR)/skybox.cpp
+	$(CXX) -c $(INCS) $^ -o $@
+
+screenQuad.o: $(SRC_DIR)/screenQuad.cpp
 	$(CXX) -c $(INCS) $^ -o $@
 
 .PHONY: cleanObj cleanImg video
