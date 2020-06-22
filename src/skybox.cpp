@@ -1,16 +1,34 @@
 #include "skybox.h"
 
-Skybox::Skybox() {}
+Skybox::Skybox() {
+  initShader();
+  initUniform();
+  initTexture();
+  initBuffer();
+}
 
 Skybox::~Skybox() {}
 
-void Skybox::draw() {
+void Skybox::draw(mat4 model, mat4 view, mat4 projection, vec3 eyePoint) {
+  glUseProgram(shader);
+
+  glUniformMatrix4fv(uniV, 1, GL_FALSE, value_ptr(view));
+  glUniformMatrix4fv(uniP, 1, GL_FALSE, value_ptr(projection));
+
+  // Let the center of the skybox always at eyePoint
+  // CAUTION: the matrix of GLM is column major
+  M = model;
+  M[3][0] += eyePoint.x;
+  M[3][1] += eyePoint.y;
+  M[3][2] += eyePoint.z;
+  glUniformMatrix4fv(uniM, 1, GL_FALSE, value_ptr(M));
+
   glUseProgram(shader);
   glBindVertexArray(vao);
   glDrawArrays(GL_TRIANGLES, 0, 36);
 }
 
-void Skybox::init() {
+void Skybox::initTexture() {
   // texture
   glActiveTexture(GL_TEXTURE0);
   glGenTextures(1, &tbo);
@@ -47,7 +65,9 @@ void Skybox::init() {
 
     FreeImage_Unload(image);
   }
+}
 
+void Skybox::initBuffer() {
   // vbo
   // if put these code before setting texture,
   // no skybox will be rendered
@@ -61,4 +81,20 @@ void Skybox::init() {
                GL_STATIC_DRAW);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(0);
+}
+
+void Skybox::initShader() {
+  shader = buildShader("./shader/vsSkybox.glsl", "./shader/fsSkybox.glsl");
+}
+
+void Skybox::initUniform() {
+  glUseProgram(shader);
+
+  uniM = myGetUniformLocation(shader, "M");
+  uniV = myGetUniformLocation(shader, "V");
+  uniP = myGetUniformLocation(shader, "P");
+
+  glUniformMatrix4fv(uniM, 1, GL_FALSE, value_ptr(M));
+  glUniformMatrix4fv(uniV, 1, GL_FALSE, value_ptr(V));
+  glUniformMatrix4fv(uniP, 1, GL_FALSE, value_ptr(P));
 }

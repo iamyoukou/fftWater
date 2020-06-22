@@ -45,8 +45,11 @@ public:
   Skybox();
   ~Skybox();
 
-  void draw();
-  void init();
+  void draw(mat4, mat4, mat4, vec3);
+  void initTexture();
+  void initBuffer();
+  void initShader();
+  void initUniform();
 };
 
 #endif

@@ -17,7 +17,7 @@ void computeMatricesFromInputs();
 void keyCallback(GLFWwindow *, int, int, int, int);
 
 GLFWwindow *window;
-Skybox skybox;
+Skybox *skybox;
 
 bool saveTrigger = false;
 int frameNumber = 0;
@@ -37,6 +37,7 @@ vec3 eyeDirection =
 vec3 up = vec3(0.f, 1.f, 0.f);
 
 mat4 oceanM, oceanV, oceanP;
+mat4 model, view, projection;
 
 /* for underwater effect */
 GLuint fboScreenQuad, tboScreenQuad, vaoScreenQuad;
@@ -59,7 +60,7 @@ int main(int argc, char *argv[]) {
   initUniform();
   initScreenQuad();
 
-  skybox.init();
+  skybox = new Skybox();
 
   cTimer timer;
 
@@ -87,7 +88,7 @@ int main(int argc, char *argv[]) {
     // skybox
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glEnable(GL_CULL_FACE);
-    skybox.draw();
+    skybox->draw(model, view, projection, eyePoint);
 
     // ocean
     glDisable(GL_CULL_FACE);
@@ -143,6 +144,8 @@ int main(int argc, char *argv[]) {
 
   // release
   ocean.release();
+  delete skybox;
+
   glfwTerminate();
   FreeImage_DeInitialise();
 
@@ -289,19 +292,8 @@ void computeMatricesFromInputs() {
   mat4 newP = perspective(initialFoV, 1.f * WINDOW_WIDTH / WINDOW_HEIGHT,
                           nearPlane, farPlane);
 
-  // update for skybox
-  glUseProgram(skybox.shader);
-  skybox.V = newV;
-  skybox.P = newP;
-  glUniformMatrix4fv(skybox.uniV, 1, GL_FALSE, value_ptr(skybox.V));
-  glUniformMatrix4fv(skybox.uniP, 1, GL_FALSE, value_ptr(skybox.P));
-
-  // Let the center of the skybox always at eyePoint
-  // CAUTION: the matrix of GLM is column major
-  skybox.M[3][0] = skybox.oriM[0][3] + eyePoint.x;
-  skybox.M[3][1] = skybox.oriM[1][3] + eyePoint.y;
-  skybox.M[3][2] = skybox.oriM[2][3] + eyePoint.z;
-  glUniformMatrix4fv(skybox.uniM, 1, GL_FALSE, value_ptr(skybox.M));
+  view = newV;
+  projection = newP;
 
   // for ocean
   oceanV = newV;
@@ -350,26 +342,11 @@ void keyCallback(GLFWwindow *keyWnd, int key, int scancode, int action,
 }
 
 void initShader() {
-  skybox.shader =
-      buildShader("./shader/vsSkybox.glsl", "./shader/fsSkybox.glsl");
-
   shaderScreenQuad =
       buildShader("./shader/vsScreenQuad.glsl", "./shader/fsScreenQuad.glsl");
 }
 
 void initUniform() {
-  /* Skybox */
-  glUseProgram(skybox.shader);
-
-  // transform
-  skybox.uniM = myGetUniformLocation(skybox.shader, "M");
-  skybox.uniV = myGetUniformLocation(skybox.shader, "V");
-  skybox.uniP = myGetUniformLocation(skybox.shader, "P");
-
-  glUniformMatrix4fv(skybox.uniM, 1, GL_FALSE, value_ptr(skybox.M));
-  glUniformMatrix4fv(skybox.uniV, 1, GL_FALSE, value_ptr(skybox.V));
-  glUniformMatrix4fv(skybox.uniP, 1, GL_FALSE, value_ptr(skybox.P));
-
   /* Screen quad */
   glUseProgram(shaderScreenQuad);
 
@@ -383,24 +360,15 @@ void initUniform() {
 }
 
 void initMatrix() {
-  // common
-  mat4 M, V, P;
-
-  M = translate(mat4(1.f), vec3(0.f, 0.f, -4.f));
-  V = lookAt(eyePoint, eyePoint + eyeDirection, up);
-  P = perspective(initialFoV, 1.f * WINDOW_WIDTH / WINDOW_HEIGHT, nearPlane,
-                  farPlane);
-
-  // for skybox
-  skybox.M = M;
-  skybox.oriM = M;
-  skybox.V = V;
-  skybox.P = P;
+  model = translate(mat4(1.f), vec3(0.f, 0.f, -4.f));
+  view = lookAt(eyePoint, eyePoint + eyeDirection, up);
+  projection = perspective(initialFoV, 1.f * WINDOW_WIDTH / WINDOW_HEIGHT,
+                           nearPlane, farPlane);
 
   // for ocean
-  oceanM = M;
-  oceanV = V;
-  oceanP = P;
+  oceanM = model;
+  oceanV = view;
+  oceanP = projection;
 }
 
 void initOther() {
