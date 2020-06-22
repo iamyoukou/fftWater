@@ -99,9 +99,7 @@ cOcean::~cOcean() {
     delete fft;
   if (vertices)
     delete[] vertices;
-}
 
-void cOcean::release() {
   glDeleteBuffers(1, &vbo_indices);
   glDeleteBuffers(1, &vboVtxs);
 }

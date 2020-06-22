@@ -58,7 +58,6 @@ protected:
 public:
   cOcean(const int N, const float A, const vec2 w, const float length);
   ~cOcean();
-  void release();
 
   float dispersion(int n_prime, int m_prime); // deep water
   float phillips(int n_prime, int m_prime);   // phillips spectrum

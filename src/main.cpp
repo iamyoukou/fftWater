@@ -12,12 +12,14 @@ void initMatrix();
 void initUniform();
 void initSkybox();
 void initScreenQuad();
+void releaseResource();
 
 void computeMatricesFromInputs();
 void keyCallback(GLFWwindow *, int, int, int, int);
 
 GLFWwindow *window;
 Skybox *skybox;
+cOcean *ocean;
 
 bool saveTrigger = false;
 int frameNumber = 0;
@@ -65,7 +67,7 @@ int main(int argc, char *argv[]) {
   cTimer timer;
 
   // ocean simulator
-  cOcean ocean = cOcean(64, 0.0005f, vec2(0.0f, 32.0f), 64);
+  ocean = new cOcean(64, 0.0005f, vec2(0.0f, 32.0f), 64);
 
   // a rough way to solve cursor position initialization problem
   // must call glfwPollEvents once to activate glfwSetCursorPos
@@ -92,8 +94,8 @@ int main(int argc, char *argv[]) {
 
     // ocean
     glDisable(GL_CULL_FACE);
-    ocean.render(timer.elapsed(false), vec3(20, 20, 20), oceanP, oceanV, oceanM,
-                 simulation, frameNumber);
+    ocean->render(timer.elapsed(false), vec3(20, 20, 20), projection, view,
+                  model, simulation, frameNumber);
 
     /* render to main screen */
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -143,11 +145,7 @@ int main(int argc, char *argv[]) {
   }
 
   // release
-  ocean.release();
-  delete skybox;
-
-  glfwTerminate();
-  FreeImage_DeInitialise();
+  releaseResource();
 
   return EXIT_SUCCESS;
 }
@@ -288,16 +286,10 @@ void computeMatricesFromInputs() {
     }
   }
 
-  mat4 newV = lookAt(eyePoint, eyePoint + direction, newUp);
-  mat4 newP = perspective(initialFoV, 1.f * WINDOW_WIDTH / WINDOW_HEIGHT,
-                          nearPlane, farPlane);
-
-  view = newV;
-  projection = newP;
-
-  // for ocean
-  oceanV = newV;
-  oceanP = newP;
+  // update transform matrix
+  view = lookAt(eyePoint, eyePoint + direction, newUp);
+  projection = perspective(initialFoV, 1.f * WINDOW_WIDTH / WINDOW_HEIGHT,
+                           nearPlane, farPlane);
 
   // For the next frame, the "last time" will be "now"
   lastTime = currentTime;
@@ -364,11 +356,6 @@ void initMatrix() {
   view = lookAt(eyePoint, eyePoint + eyeDirection, up);
   projection = perspective(initialFoV, 1.f * WINDOW_WIDTH / WINDOW_HEIGHT,
                            nearPlane, farPlane);
-
-  // for ocean
-  oceanM = model;
-  oceanV = view;
-  oceanP = projection;
 }
 
 void initOther() {
@@ -424,4 +411,12 @@ void initScreenQuad() {
                GL_STATIC_DRAW);
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(0);
+}
+
+void releaseResource() {
+  delete ocean;
+  delete skybox;
+
+  glfwTerminate();
+  FreeImage_DeInitialise();
 }
