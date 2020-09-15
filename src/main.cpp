@@ -21,7 +21,8 @@ ScreenQuad *screenQuad;
 
 bool saveTrigger = false;
 int frameNumber = 0;
-bool simulation = true;
+bool resume = true;
+bool saveMap = false;
 
 float verticalAngle = -1.71874;
 float horizontalAngle = 2.4934;
@@ -51,7 +52,7 @@ int main(int argc, char *argv[]) {
   cTimer timer;
 
   // ocean simulator
-  ocean = new cOcean(64, 0.0005f, vec2(0.0f, 32.0f), 64);
+  ocean = new cOcean(64, 0.001f, vec2(16.0f, 16.0f), 16);
 
   // a rough way to solve cursor position initialization problem
   // must call glfwPollEvents once to activate glfwSetCursorPos
@@ -79,7 +80,32 @@ int main(int argc, char *argv[]) {
     // ocean
     glDisable(GL_CULL_FACE);
     ocean->render(timer.elapsed(false), vec3(20, 20, 20), projection, view,
-                  model, simulation, frameNumber);
+                  model, resume, frameNumber);
+
+    // save height map
+    if (saveMap) {
+      FIBITMAP *bitmap = FreeImage_Allocate(WINDOW_WIDTH, WINDOW_HEIGHT, 24);
+      RGBQUAD color;
+
+      if (!bitmap) {
+        std::cout << "FreeImage: Cannot allocate image." << '\n';
+        exit(EXIT_FAILURE);
+      }
+
+      for (int i = 0; i < WINDOW_WIDTH; i++) {
+        for (int j = 0; j < WINDOW_HEIGHT; j++) {
+          color.rgbRed = 0;
+          color.rgbGreen = (double)i / WINDOW_WIDTH * 255.0;
+          color.rgbBlue = (double)j / WINDOW_HEIGHT * 255.0;
+          FreeImage_SetPixelColor(bitmap, i, j, &color);
+        }
+      }
+
+      if (FreeImage_Save(FIF_PNG, bitmap, "test.png", 0))
+        cout << "Image successfully saved!" << endl;
+
+      saveMap = false;
+    }
 
     /* render to main screen */
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -196,7 +222,7 @@ void computeMatricesFromInputs() {
   verticalAngle += mouseSpeed * float(-ypos + WINDOW_HEIGHT / 2.f);
 
   // restrict viewing angles
-  verticalAngle = glm::clamp(verticalAngle, -2.0f, -0.75f);
+  // verticalAngle = glm::clamp(verticalAngle, -2.0f, -0.75f);
 
   // Direction : Spherical coordinates to Cartesian coordinates conversion
   vec3 direction =
@@ -211,8 +237,10 @@ void computeMatricesFromInputs() {
   vec3 newUp = cross(right, direction);
 
   // restrict movements, can only move horizontally
-  vec3 forwardDir = normalize(vec3(direction.x, 0, direction.z));
-  vec3 rightDir = normalize(vec3(right.x, 0, right.z));
+  // vec3 forwardDir = normalize(vec3(direction.x, 0, direction.z));
+  // vec3 rightDir = normalize(vec3(right.x, 0, right.z));
+  vec3 forwardDir = normalize(direction);
+  vec3 rightDir = normalize(right);
 
   // Move forward
   if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
@@ -298,7 +326,11 @@ void keyCallback(GLFWwindow *keyWnd, int key, int scancode, int action,
       break;
     }
     case GLFW_KEY_X: {
-      simulation = !simulation;
+      resume = !resume;
+      break;
+    }
+    case GLFW_KEY_M: {
+      saveMap = true;
       break;
     }
     default:

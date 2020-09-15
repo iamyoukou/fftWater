@@ -11,8 +11,9 @@ Basically, they are created using the well-known method proposed by [Tessendorf,
 Tessendorf states that the height of wind-waves in the open ocean
 can be decomposed into a sum of sine and cosine waves.
 Given a set of frequencies and sampling points,
-the height can be efficiently calculated using Fast Fourier Transform (FFT).
-That's why I call it FFT water.
+the height can be calculated using Discrete Fourier Transform (DFT).
+And Fast Fourier Transform (FFT) is an efficient way to calculate DFT.
+That's why I call it FFT Water.
 
 Technically, the method uses Inverse FFT, as it creates wave heights from frequencies.
 But essentially, IFFT is same as FFT.

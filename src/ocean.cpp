@@ -292,14 +292,14 @@ void cOcean::render(float t, glm::vec3 light_pos, glm::mat4 Projection,
   glBindVertexArray(vao);
 
   // duplicated
-  for (int j = 0; j < 5; j++) {
-    for (int i = 0; i < 5; i++) {
+  for (int j = 0; j < 1; j++) {
+    for (int i = 0; i < 1; i++) {
       // modify the scale matrix to obtain different visual effect
       // to obtain a stromy ocean,
       // decrease the difference between scaleY and (scaleX, scaleZ)
       // e.g. vec3(10.f, 10.f, 10.f)
       // on the other hand, (10.f, 2.5f, 10.f) gives a relatively calm ocean
-      Model = glm::scale(glm::mat4(1.0f), glm::vec3(10.f, 2.5f, 10.f));
+      Model = glm::scale(glm::mat4(1.0f), glm::vec3(1.f, 1.f, 1.f));
       Model = glm::translate(Model, glm::vec3(length * i, 0, length * -j));
       glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(Model));
 
