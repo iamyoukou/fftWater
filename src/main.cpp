@@ -24,14 +24,14 @@ int frameNumber = 0;
 bool resume = true;
 bool saveMap = false;
 
-float verticalAngle = -1.71874;
-float horizontalAngle = 2.4934;
+float verticalAngle = -2.02374;
+float horizontalAngle = 3.1934;
 float initialFoV = 45.0f;
 float speed = 25.0f;
 float mouseSpeed = 0.005f;
 float nearPlane = 0.01f, farPlane = 2000.f;
 
-vec3 eyePoint = vec3(-27.000000, 15, -16.000000);
+vec3 eyePoint = vec3(-18.537275, 7.871686, 1.186902);
 vec3 eyeDirection =
     vec3(sin(verticalAngle) * cos(horizontalAngle), cos(verticalAngle),
          sin(verticalAngle) * sin(horizontalAngle));
@@ -52,7 +52,8 @@ int main(int argc, char *argv[]) {
   cTimer timer;
 
   // ocean simulator
-  ocean = new cOcean(64, 0.001f, vec2(16.0f, 16.0f), 16);
+  int N = 64;
+  ocean = new cOcean(N, 0.005f, vec2(16.0f, 16.0f), 16);
 
   // a rough way to solve cursor position initialization problem
   // must call glfwPollEvents once to activate glfwSetCursorPos
@@ -84,7 +85,11 @@ int main(int argc, char *argv[]) {
 
     // save height map
     if (saveMap) {
-      FIBITMAP *bitmap = FreeImage_Allocate(WINDOW_WIDTH, WINDOW_HEIGHT, 24);
+      int w, h;
+      w = N;
+      h = w;
+
+      FIBITMAP *bitmap = FreeImage_Allocate(w, h, 24);
       RGBQUAD color;
 
       if (!bitmap) {
@@ -92,12 +97,31 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
       }
 
-      for (int i = 0; i < WINDOW_WIDTH; i++) {
-        for (int j = 0; j < WINDOW_HEIGHT; j++) {
-          color.rgbRed = 0;
-          color.rgbGreen = (double)i / WINDOW_WIDTH * 255.0;
-          color.rgbBlue = (double)j / WINDOW_HEIGHT * 255.0;
+      for (int i = 0; i < w; i++) {
+        for (int j = 0; j < h; j++) {
+          int idx = i * N + j;
+
+          float x = ocean->vertices[idx].x;
+          x += 10.f;
+          x *= 10.f;
+          // std::cout << x << '\n';
+
+          float y = ocean->vertices[idx].y;
+          y += 10.f;
+          y *= 20.f;
+          // std::cout << y << '\n';
+
+          float z = ocean->vertices[idx].z;
+          z += 10.f;
+          z *= 10.f;
+          // std::cout << z << '\n';
+
+          color.rgbRed = z;
+          color.rgbGreen = z;
+          color.rgbBlue = z;
           FreeImage_SetPixelColor(bitmap, i, j, &color);
+
+          // std::cout << float(color.rgbRed) << '\n';
         }
       }
 
