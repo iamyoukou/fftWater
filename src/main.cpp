@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
   cTimer timer;
 
   // ocean simulator
-  int N = 64;
+  int N = 512;
   ocean = new cOcean(N, 0.005f, vec2(16.0f, 16.0f), 16);
 
   // a rough way to solve cursor position initialization problem
@@ -89,6 +89,41 @@ int main(int argc, char *argv[]) {
       w = N;
       h = w;
 
+      // find max, min
+      float maxHeight = 0, minHeight = 0;
+
+      // find max
+      for (int i = 0; i < w; i++) {
+        for (int j = 0; j < h; j++) {
+          int idx = i * N + j;
+
+          float y = ocean->vertices[idx].y;
+
+          if (y > maxHeight) {
+            maxHeight = y;
+          }
+        }
+      }
+
+      // find min
+      for (int i = 0; i < w; i++) {
+        for (int j = 0; j < h; j++) {
+          int idx = i * N + j;
+
+          float y = ocean->vertices[idx].y;
+
+          if (y < minHeight) {
+            minHeight = y;
+          }
+        }
+      }
+
+      // height range
+      float heightRange = maxHeight - minHeight;
+
+      // std::cout << "maxHeight: " << maxHeight << '\n';
+      // std::cout << "minHeight: " << minHeight << '\n';
+
       FIBITMAP *bitmap = FreeImage_Allocate(w, h, 24);
       RGBQUAD color;
 
@@ -101,27 +136,29 @@ int main(int argc, char *argv[]) {
         for (int j = 0; j < h; j++) {
           int idx = i * N + j;
 
-          float x = ocean->vertices[idx].x;
-          x += 10.f;
-          x *= 10.f;
+          // float x = ocean->vertices[idx].x;
+          // x += 10.f;
+          // x *= 10.f;
           // std::cout << x << '\n';
 
           float y = ocean->vertices[idx].y;
-          y += 10.f;
-          y *= 20.f;
+          y += abs(minHeight); // to non-negative
+          y /= heightRange;    // normalize
           // std::cout << y << '\n';
+          int iy = int(y * 255.0); // to [0, 255]
 
-          float z = ocean->vertices[idx].z;
-          z += 10.f;
-          z *= 10.f;
+          // float z = ocean->vertices[idx].z;
+          // z += 10.f;
+          // z *= 10.f;
           // std::cout << z << '\n';
 
-          color.rgbRed = z;
-          color.rgbGreen = z;
-          color.rgbBlue = z;
+          color.rgbRed = iy;
+          color.rgbGreen = iy;
+          color.rgbBlue = iy;
           FreeImage_SetPixelColor(bitmap, i, j, &color);
 
           // std::cout << float(color.rgbRed) << '\n';
+          // std::cout << '\n';
         }
       }
 
