@@ -14,6 +14,9 @@ void releaseResource();
 void computeMatricesFromInputs();
 void keyCallback(GLFWwindow *, int, int, int, int);
 
+void saveHeightMap();
+void saveNormalMap();
+
 GLFWwindow *window;
 Skybox *skybox;
 cOcean *ocean;
@@ -40,6 +43,8 @@ vec3 up = vec3(0.f, 1.f, 0.f);
 mat4 model, view, projection;
 bool isRising = false, isDiving = false;
 
+int N = 512;
+
 int main(int argc, char *argv[]) {
   initGL();
   initOther();
@@ -52,7 +57,6 @@ int main(int argc, char *argv[]) {
   cTimer timer;
 
   // ocean simulator
-  int N = 512;
   ocean = new cOcean(N, 0.005f, vec2(16.0f, 16.0f), 16);
 
   // a rough way to solve cursor position initialization problem
@@ -85,85 +89,8 @@ int main(int argc, char *argv[]) {
 
     // save height map
     if (saveMap) {
-      int w, h;
-      w = N;
-      h = w;
-
-      // find max, min
-      float maxHeight = 0, minHeight = 0;
-
-      // find max
-      for (int i = 0; i < w; i++) {
-        for (int j = 0; j < h; j++) {
-          int idx = i * N + j;
-
-          float y = ocean->vertices[idx].y;
-
-          if (y > maxHeight) {
-            maxHeight = y;
-          }
-        }
-      }
-
-      // find min
-      for (int i = 0; i < w; i++) {
-        for (int j = 0; j < h; j++) {
-          int idx = i * N + j;
-
-          float y = ocean->vertices[idx].y;
-
-          if (y < minHeight) {
-            minHeight = y;
-          }
-        }
-      }
-
-      // height range
-      float heightRange = maxHeight - minHeight;
-
-      // std::cout << "maxHeight: " << maxHeight << '\n';
-      // std::cout << "minHeight: " << minHeight << '\n';
-
-      FIBITMAP *bitmap = FreeImage_Allocate(w, h, 24);
-      RGBQUAD color;
-
-      if (!bitmap) {
-        std::cout << "FreeImage: Cannot allocate image." << '\n';
-        exit(EXIT_FAILURE);
-      }
-
-      for (int i = 0; i < w; i++) {
-        for (int j = 0; j < h; j++) {
-          int idx = i * N + j;
-
-          // float x = ocean->vertices[idx].x;
-          // x += 10.f;
-          // x *= 10.f;
-          // std::cout << x << '\n';
-
-          float y = ocean->vertices[idx].y;
-          y += abs(minHeight); // to non-negative
-          y /= heightRange;    // normalize
-          // std::cout << y << '\n';
-          int iy = int(y * 255.0); // to [0, 255]
-
-          // float z = ocean->vertices[idx].z;
-          // z += 10.f;
-          // z *= 10.f;
-          // std::cout << z << '\n';
-
-          color.rgbRed = iy;
-          color.rgbGreen = iy;
-          color.rgbBlue = iy;
-          FreeImage_SetPixelColor(bitmap, i, j, &color);
-
-          // std::cout << float(color.rgbRed) << '\n';
-          // std::cout << '\n';
-        }
-      }
-
-      if (FreeImage_Save(FIF_PNG, bitmap, "test.png", 0))
-        cout << "Image successfully saved!" << endl;
+      saveHeightMap();
+      saveNormalMap();
 
       saveMap = false;
     }
@@ -422,4 +349,127 @@ void releaseResource() {
 
   glfwTerminate();
   FreeImage_DeInitialise();
+}
+
+void saveHeightMap() {
+  int w, h;
+  w = N;
+  h = w;
+
+  // find max, min
+  float maxHeight = 0, minHeight = 0;
+
+  // find max
+  for (int i = 0; i < w; i++) {
+    for (int j = 0; j < h; j++) {
+      int idx = i * N + j;
+
+      float y = ocean->vertices[idx].y;
+
+      if (y > maxHeight) {
+        maxHeight = y;
+      }
+    }
+  }
+
+  // find min
+  for (int i = 0; i < w; i++) {
+    for (int j = 0; j < h; j++) {
+      int idx = i * N + j;
+
+      float y = ocean->vertices[idx].y;
+
+      if (y < minHeight) {
+        minHeight = y;
+      }
+    }
+  }
+
+  // height range
+  float heightRange = maxHeight - minHeight;
+
+  // std::cout << "maxHeight: " << maxHeight << '\n';
+  // std::cout << "minHeight: " << minHeight << '\n';
+
+  FIBITMAP *bitmap = FreeImage_Allocate(w, h, 24);
+  RGBQUAD color;
+
+  if (!bitmap) {
+    std::cout << "FreeImage: Cannot allocate image." << '\n';
+    exit(EXIT_FAILURE);
+  }
+
+  for (int i = 0; i < w; i++) {
+    for (int j = 0; j < h; j++) {
+      int idx = i * N + j;
+
+      // float x = ocean->vertices[idx].x;
+      // x += 10.f;
+      // x *= 10.f;
+      // std::cout << x << '\n';
+
+      float y = ocean->vertices[idx].y;
+      y += abs(minHeight); // to non-negative
+      y /= heightRange;    // normalize
+      // std::cout << y << '\n';
+      int iy = int(y * 255.0); // to [0, 255]
+
+      // float z = ocean->vertices[idx].z;
+      // z += 10.f;
+      // z *= 10.f;
+      // std::cout << z << '\n';
+
+      color.rgbRed = iy;
+      color.rgbGreen = iy;
+      color.rgbBlue = iy;
+      FreeImage_SetPixelColor(bitmap, i, j, &color);
+
+      // std::cout << float(color.rgbRed) << '\n';
+      // std::cout << '\n';
+    }
+  }
+
+  if (FreeImage_Save(FIF_PNG, bitmap, "height.png", 0))
+    cout << "Height map successfully saved!" << endl;
+}
+
+void saveNormalMap() {
+  int w, h;
+  w = N;
+  h = w;
+
+  FIBITMAP *bitmap = FreeImage_Allocate(w, h, 24);
+  RGBQUAD color;
+
+  if (!bitmap) {
+    std::cout << "FreeImage: Cannot allocate image." << '\n';
+    exit(EXIT_FAILURE);
+  }
+
+  for (int i = 0; i < w; i++) {
+    for (int j = 0; j < h; j++) {
+      int idx = i * N + j;
+
+      vec3 normal(ocean->vertices[idx].nx, ocean->vertices[idx].ny,
+                  ocean->vertices[idx].nz);
+      normal = normalize(normal);      // to [-1, 1]
+      normal = (normal + 1.0f) / 2.0f; // to [0, 1]
+
+      // to [0, 255]
+      int ix = int(normal.x * 255.0);
+      int iy = int(normal.y * 255.0);
+      int iz = int(normal.z * 255.0);
+
+      color.rgbRed = ix;
+      color.rgbGreen = iy;
+      color.rgbBlue = iz;
+
+      // std::cout << ix << ", " << iy << ", " << iz << '\n';
+
+      FreeImage_SetPixelColor(bitmap, i, j, &color);
+    }
+  }
+
+  if (FreeImage_Save(FIF_PNG, bitmap, "normal.png", 0))
+    cout << "Normal map successfully saved!" << endl;
 }
