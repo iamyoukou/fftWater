@@ -374,9 +374,9 @@ void cOcean::evaluateWavesFFT(float t) {
 
 void cOcean::render(float t, mat4 M, mat4 V, mat4 P, vec3 eyePoint,
                     vec3 lightColor, vec3 lightPos, bool resume, int frameN) {
-  // if (resume) {
-  //   evaluateWavesFFT(t);
-  // }
+  if (resume) {
+    evaluateWavesFFT(t);
+  }
 
   // write maps
   // writeHeightMap();

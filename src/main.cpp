@@ -93,12 +93,12 @@ int main(int argc, char *argv[]) {
                   lightColor, lightPos, resume, frameNumber);
 
     // save height map
-    // if (saveMap) {
-    //   saveHeightMap();
-    //   saveNormalMap();
-    //
-    //   saveMap = false;
-    // }
+    if (saveMap) {
+      saveHeightMap();
+      saveNormalMap();
+
+      saveMap = false;
+    }
 
     /* render to main screen */
     // glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -373,9 +373,9 @@ void saveHeightMap() {
     for (int j = 0; j < h; j++) {
       int idx = i * N + j;
 
-      float y = ocean->vertices[idx].y;
-      float x = ocean->vertices[idx].x;
-      float z = ocean->vertices[idx].z;
+      float y = ocean->vertices[idx].oy - ocean->vertices[idx].y;
+      float x = ocean->vertices[idx].ox - ocean->vertices[idx].x;
+      float z = ocean->vertices[idx].oz - ocean->vertices[idx].z;
 
       if (y > maxHeight) {
         maxHeight = y;
@@ -394,9 +394,9 @@ void saveHeightMap() {
     for (int j = 0; j < h; j++) {
       int idx = i * N + j;
 
-      float y = ocean->vertices[idx].y;
-      float x = ocean->vertices[idx].x;
-      float z = ocean->vertices[idx].z;
+      float y = ocean->vertices[idx].oy - ocean->vertices[idx].y;
+      float x = ocean->vertices[idx].ox - ocean->vertices[idx].x;
+      float z = ocean->vertices[idx].oz - ocean->vertices[idx].z;
 
       if (y < minHeight) {
         minHeight = y;
@@ -430,17 +430,18 @@ void saveHeightMap() {
     for (int j = 0; j < h; j++) {
       int idx = i * N + j;
 
-      float x = ocean->vertices[idx].x;
+      float x = ocean->vertices[idx].ox - ocean->vertices[idx].x;
+      // std::cout << x << '\n';
       x += abs(minDispX);
       x /= xRange;
       int ix = int(x * 255.0);
 
-      float y = ocean->vertices[idx].y;
+      float y = ocean->vertices[idx].oy - ocean->vertices[idx].y;
       y += abs(minHeight);     // to non-negative
       y /= heightRange;        // normalize
       int iy = int(y * 255.0); // to [0, 255]
 
-      float z = ocean->vertices[idx].z;
+      float z = ocean->vertices[idx].oz - ocean->vertices[idx].z;
       z += abs(minDispZ);
       z /= zRange;
       int iz = int(z * 255.0);

@@ -41,9 +41,9 @@ void main() {
   worldN = interpolate(esInN[0], esInN[1], esInN[2], esInN[3]);
 
   vec3 offset = texture(texHeight, mod(uv, 1.0)).rgb * 2.0 - 1.0;
-  worldPos.x = offset.x;
-  worldPos.y = offset.y * 0.1;
-  // worldPos.z = offset.z * 0.5;
+  worldPos.x += offset.x * 0.1;
+  worldPos.y += offset.y * 0.1;
+  worldPos.z += offset.z * 0.1;
 
   gl_Position = P * V * vec4(worldPos, 1.0);
 
