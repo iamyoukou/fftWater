@@ -32,27 +32,27 @@ public:
   float length;     // length parameter
   Complex *h_tilde, // for fast fourier transform
       *h_tilde_slopex, *h_tilde_slopez, *h_tilde_dx, *h_tilde_dz;
-  cFFT *fft; // fast fourier transform
+  cFFT *fft;              // fast fourier transform
+  vertex_ocean *vertices; // vertices info for simulation
 
-  vertex_ocean *vertices;                  // vertices for vertex buffer object
-  GLuint vboVtxs, vboNs, vbo_indices, vao; // vertex buffer objects
+  /* vertices info for rendering */
+  Assimp::Importer importer;
+  const aiScene *scene;
 
-  GLuint shader; // shaders
-  GLint vertex, normal, texture, light_position, projection, view,
-      model; // attributes and uniforms
+  vector<GLuint> vboVtxs, vboUvs, vboNmls;
+  vector<GLuint> vaos;
 
-  GLfloat *aWaterVtxs, *aWaterNs;
-  int nOfQuads;
-  vector<Point> points;
-
-  // for a xz-plane
-  // origin: left-bottom
-  // border: right-top
-  vec3 origin;
-  // vec3 border;
-
-  float cellSize;
-  // FIBITMAP *heightMap;
+  GLuint shader;
+  GLuint tboHeight, tboNormal, tboFresnel;
+  GLint uniM, uniV, uniP;
+  GLint uniLightColor, uniLightPos;
+  GLint uniTexReflect, uniTexRefract, uniTexHeight, uniTexNormal, uniTexSkybox;
+  GLint uniTexFresnel;
+  GLint uniEyePoint;
+  GLint uniDudvMove;
+  GLuint tboRefract, tboReflect;
+  GLuint fboRefract, fboReflect;
+  GLuint rboDepthRefract, rboDepthReflect;
 
 protected:
 public:
@@ -64,13 +64,16 @@ public:
   Complex hTilde_0(int n_prime, int m_prime);
   Complex hTilde(float t, int n_prime, int m_prime);
   void evaluateWavesFFT(float t);
-  void render(float t, glm::vec3 light_pos, glm::mat4 Projection,
-              glm::mat4 View, glm::mat4 Model, bool resume, int frameN);
-  void computeWaterGeometry();
-  void updateWaterGeometry();
-  void drawPoints();
-  void drawMesh();
+  void render(float, mat4, mat4, mat4, vec3, vec3, vec3, bool, int);
   vec3 getVertex(int ix, int iz);
+
+  void initBuffers();
+  void initShader();
+  void initTexture();
+  void initUniform();
+  void initReflect();
+  void initRefract();
+  void setTexture(GLuint &, int, const string, FREE_IMAGE_FORMAT);
 };
 
 #endif

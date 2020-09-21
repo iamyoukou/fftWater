@@ -41,47 +41,15 @@ cOcean::cOcean(const int N, const float A, const vec2 w, const float length)
     }
   }
 
-  origin = vec3(vertices[0].x, vertices[0].y, vertices[0].z);
-  // border = origin + vec3(length);
-  cellSize = length / float(N);
+  // import water mesh
+  scene = importer.ReadFile("./mesh/quad.obj", aiProcess_CalcTangentSpace);
 
-  // 2 triangles per quad
-  // 3 vertices per triangle
-  // 3 GLfloat per vertex
-  nOfQuads = N * N;
-  aWaterVtxs = new GLfloat[nOfQuads * 2 * 3 * 3];
-  aWaterNs = new GLfloat[nOfQuads * 2 * 3 * 3];
-
-  computeWaterGeometry();
-
-  // buffer object
-  // vao
-  glGenVertexArrays(1, &vao);
-  glBindVertexArray(vao);
-
-  // vbo for vertex position
-  glGenBuffers(1, &vboVtxs);
-  glBindBuffer(GL_ARRAY_BUFFER, vboVtxs);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * nOfQuads * 2 * 3 * 3,
-               aWaterVtxs, GL_STREAM_DRAW);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-  glEnableVertexAttribArray(0);
-
-  // vbo for vertex normal
-  glGenBuffers(1, &vboNs);
-  glBindBuffer(GL_ARRAY_BUFFER, vboNs);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * nOfQuads * 2 * 3 * 3,
-               aWaterNs, GL_STREAM_DRAW);
-  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-  glEnableVertexAttribArray(1);
-
-  shader = buildShader("./shader/vsOcean.glsl", "./shader/fsOcean.glsl");
-  // shader = buildShader("./shader/vsPoint.glsl", "./shader/fsPoint.glsl");
-
-  // light_position = myGetUniformLocation(shader, "light_position");
-  projection = myGetUniformLocation(shader, "P");
-  view = myGetUniformLocation(shader, "V");
-  model = myGetUniformLocation(shader, "M");
+  initShader();
+  initBuffers();
+  initTexture();
+  initUniform();
+  // initReflect();
+  // initRefract();
 }
 
 cOcean::~cOcean() {
@@ -99,9 +67,139 @@ cOcean::~cOcean() {
     delete fft;
   if (vertices)
     delete[] vertices;
+}
 
-  glDeleteBuffers(1, &vbo_indices);
-  glDeleteBuffers(1, &vboVtxs);
+void cOcean::initShader() {
+  shader = buildShader("./shader/vsOcean.glsl", "./shader/fsOcean.glsl",
+                       "./shader/tcsQuad.glsl", "./shader/tesQuad.glsl");
+}
+
+void cOcean::initBuffers() {
+  // for each mesh
+  for (size_t i = 0; i < scene->mNumMeshes; i++) {
+    const aiMesh *mesh = scene->mMeshes[i];
+    int numVtxs = mesh->mNumVertices;
+
+    // numVertices * numComponents
+    GLfloat *aVtxCoords = new GLfloat[numVtxs * 3];
+    GLfloat *aUvs = new GLfloat[numVtxs * 2];
+    GLfloat *aNormals = new GLfloat[numVtxs * 3];
+
+    for (size_t j = 0; j < numVtxs; j++) {
+      aiVector3D &vtx = mesh->mVertices[j];
+      aVtxCoords[j * 3 + 0] = vtx.x;
+      aVtxCoords[j * 3 + 1] = vtx.y;
+      aVtxCoords[j * 3 + 2] = vtx.z;
+
+      aiVector3D &nml = mesh->mNormals[j];
+      aNormals[j * 3 + 0] = nml.x;
+      aNormals[j * 3 + 1] = nml.y;
+      aNormals[j * 3 + 2] = nml.z;
+
+      aiVector3D &uv = mesh->mTextureCoords[0][j];
+      aUvs[j * 2 + 0] = uv.x;
+      aUvs[j * 2 + 1] = uv.y;
+    }
+
+    // vao
+    GLuint vao;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+    vaos.push_back(vao);
+
+    // vbo for vertex
+    GLuint vboVtx;
+    glGenBuffers(1, &vboVtx);
+    glBindBuffer(GL_ARRAY_BUFFER, vboVtx);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * numVtxs * 3, aVtxCoords,
+                 GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(0);
+    vboVtxs.push_back(vboVtx);
+
+    // vbo for uv
+    GLuint vboUv;
+    glGenBuffers(1, &vboUv);
+    glBindBuffer(GL_ARRAY_BUFFER, vboUv);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * numVtxs * 2, aUvs,
+                 GL_STATIC_DRAW);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(1);
+    vboUvs.push_back(vboUv);
+
+    // vbo for normal
+    GLuint vboNml;
+    glGenBuffers(1, &vboNml);
+    glBindBuffer(GL_ARRAY_BUFFER, vboNml);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * numVtxs * 3, aNormals,
+                 GL_STATIC_DRAW);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(2);
+    vboNmls.push_back(vboNml);
+
+    // delete client data
+    delete[] aVtxCoords;
+    delete[] aUvs;
+    delete[] aNormals;
+  } // end for each mesh
+}
+
+void cOcean::initTexture() {
+  setTexture(tboHeight, 11, "./image/height.png", FIF_PNG);
+  setTexture(tboNormal, 12, "./image/normal.png", FIF_PNG);
+  setTexture(tboFresnel, 13, "./image/fresnel.png", FIF_PNG);
+}
+
+void cOcean::initUniform() {
+  glUseProgram(shader);
+
+  // transform
+  uniM = myGetUniformLocation(shader, "M");
+  uniV = myGetUniformLocation(shader, "V");
+  uniP = myGetUniformLocation(shader, "P");
+
+  // texture
+  uniTexReflect = myGetUniformLocation(shader, "texReflect");
+  uniTexRefract = myGetUniformLocation(shader, "texRefract");
+  uniTexHeight = myGetUniformLocation(shader, "texHeight");
+  uniTexNormal = myGetUniformLocation(shader, "texNormal");
+  uniTexSkybox = myGetUniformLocation(shader, "texSkybox");
+  uniTexFresnel = myGetUniformLocation(shader, "texFresnel");
+
+  glUniform1i(uniTexHeight, 11);
+  glUniform1i(uniTexNormal, 12);
+  glUniform1i(uniTexFresnel, 13);
+  glUniform1i(uniTexReflect, 3);
+  glUniform1i(uniTexRefract, 2);
+
+  // light
+  uniLightColor = myGetUniformLocation(shader, "lightColor");
+  uniLightPos = myGetUniformLocation(shader, "lightPos");
+
+  // other
+  uniDudvMove = myGetUniformLocation(shader, "dudvMove");
+  uniEyePoint = myGetUniformLocation(shader, "eyePoint");
+}
+
+void cOcean::setTexture(GLuint &tbo, int texUnit, const string texDir,
+                        FREE_IMAGE_FORMAT imgType) {
+  glActiveTexture(GL_TEXTURE0 + texUnit);
+
+  FIBITMAP *texImage =
+      FreeImage_ConvertTo24Bits(FreeImage_Load(imgType, texDir.c_str()));
+
+  glGenTextures(1, &tbo);
+  glBindTexture(GL_TEXTURE_2D, tbo);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, FreeImage_GetWidth(texImage),
+               FreeImage_GetHeight(texImage), 0, GL_BGR, GL_UNSIGNED_BYTE,
+               (void *)FreeImage_GetBits(texImage));
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+  // release
+  FreeImage_Unload(texImage);
 }
 
 float cOcean::dispersion(int n_prime, int m_prime) {
@@ -273,23 +371,22 @@ void cOcean::evaluateWavesFFT(float t) {
   }
 }
 
-void cOcean::render(float t, glm::vec3 light_pos, glm::mat4 Projection,
-                    glm::mat4 View, glm::mat4 Model, bool resume, int frameN) {
-  if (resume) {
-    evaluateWavesFFT(t);
-  }
-
-  computeWaterGeometry();
-  updateWaterGeometry();
+void cOcean::render(float t, mat4 M, mat4 V, mat4 P, vec3 eyePoint,
+                    vec3 lightColor, vec3 lightPos, bool resume, int frameN) {
+  // if (resume) {
+  //   evaluateWavesFFT(t);
+  // }
 
   // update transform matrix
   glUseProgram(shader);
-  glUniform3f(light_position, light_pos.x, light_pos.y, light_pos.z);
-  glUniformMatrix4fv(projection, 1, GL_FALSE, glm::value_ptr(Projection));
-  glUniformMatrix4fv(view, 1, GL_FALSE, glm::value_ptr(View));
-  glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(Model));
 
-  glBindVertexArray(vao);
+  glUniformMatrix4fv(uniM, 1, GL_FALSE, value_ptr(M));
+  glUniformMatrix4fv(uniV, 1, GL_FALSE, value_ptr(V));
+  glUniformMatrix4fv(uniP, 1, GL_FALSE, value_ptr(P));
+
+  glUniform3fv(uniEyePoint, 1, value_ptr(eyePoint));
+  glUniform3fv(uniLightColor, 1, value_ptr(lightColor));
+  glUniform3fv(uniLightPos, 1, value_ptr(lightPos));
 
   // duplicated
   for (int j = 0; j < 1; j++) {
@@ -299,195 +396,18 @@ void cOcean::render(float t, glm::vec3 light_pos, glm::mat4 Projection,
       // decrease the difference between scaleY and (scaleX, scaleZ)
       // e.g. vec3(10.f, 10.f, 10.f)
       // on the other hand, (10.f, 2.5f, 10.f) gives a relatively calm ocean
-      Model = glm::scale(glm::mat4(1.0f), glm::vec3(1.f, 1.f, 1.f));
-      Model = glm::translate(Model, glm::vec3(length * i, 0, length * -j));
-      glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(Model));
+      mat4 Model = scale(mat4(1.0f), vec3(1.f, 1.f, 1.f));
+      Model = translate(Model, vec3(length * i, 0, length * -j));
+      glUniformMatrix4fv(uniM, 1, GL_FALSE, value_ptr(Model));
 
-      glDrawArrays(GL_TRIANGLES, 0, nOfQuads * 2 * 3);
-    }
-  }
+      for (size_t i = 0; i < scene->mNumMeshes; i++) {
+        int numVtxs = scene->mMeshes[i]->mNumVertices;
 
-  // single
-  // glBindVertexArray(vao);
-  // glDrawArrays(GL_TRIANGLES, 0, nOfQuads * 2 * 3);
-
-  // drawPoints();
-}
-
-void cOcean::computeWaterGeometry() {
-  // geometry discription for opengl
-  int idxQuad = 0;
-
-  for (size_t i = 0; i < N; i++) {
-    for (size_t j = 0; j < N; j++) {
-      // note: there are Nplus1 vertices in a row and column
-      // note: be careful, the order of indices
-      // may result in a back-facing triangle
-      int idx0 = i * Nplus1 + j;
-      int idx1 = idx0 + 1;
-      int idx2 = idx1 + Nplus1;
-      int idx3 = idx2 - 1;
-
-      // the first triangle in a quad
-      // vertex position
-      aWaterVtxs[idxQuad * 18 + 0] = vertices[idx2].x;
-      aWaterVtxs[idxQuad * 18 + 1] = vertices[idx2].y;
-      aWaterVtxs[idxQuad * 18 + 2] = vertices[idx2].z;
-
-      aWaterVtxs[idxQuad * 18 + 3] = vertices[idx1].x;
-      aWaterVtxs[idxQuad * 18 + 4] = vertices[idx1].y;
-      aWaterVtxs[idxQuad * 18 + 5] = vertices[idx1].z;
-
-      aWaterVtxs[idxQuad * 18 + 6] = vertices[idx0].x;
-      aWaterVtxs[idxQuad * 18 + 7] = vertices[idx0].y;
-      aWaterVtxs[idxQuad * 18 + 8] = vertices[idx0].z;
-
-      // std::cout << "idx0 = " << idx0 << '\n';
-      // std::cout << "triangle 1: " << '\n';
-      // std::cout << vertices[idx0].x << ", " << vertices[idx0].y << ", "
-      //           << vertices[idx0].z << '\n';
-      // std::cout << vertices[idx1].x << ", " << vertices[idx1].y << ", "
-      //           << vertices[idx1].z << '\n';
-      // std::cout << vertices[idx2].x << ", " << vertices[idx2].y << ", "
-      //           << vertices[idx2].z << '\n';
-
-      // vertex normal
-      aWaterNs[idxQuad * 18 + 0] = vertices[idx2].nx;
-      aWaterNs[idxQuad * 18 + 1] = vertices[idx2].ny;
-      aWaterNs[idxQuad * 18 + 2] = vertices[idx2].nz;
-
-      aWaterNs[idxQuad * 18 + 3] = vertices[idx1].nx;
-      aWaterNs[idxQuad * 18 + 4] = vertices[idx1].ny;
-      aWaterNs[idxQuad * 18 + 5] = vertices[idx1].nz;
-
-      aWaterNs[idxQuad * 18 + 6] = vertices[idx0].nx;
-      aWaterNs[idxQuad * 18 + 7] = vertices[idx0].ny;
-      aWaterNs[idxQuad * 18 + 8] = vertices[idx0].nz;
-
-      // the second triangle in a quad
-      // vertex position
-      aWaterVtxs[idxQuad * 18 + 9] = vertices[idx3].x;
-      aWaterVtxs[idxQuad * 18 + 10] = vertices[idx3].y;
-      aWaterVtxs[idxQuad * 18 + 11] = vertices[idx3].z;
-
-      aWaterVtxs[idxQuad * 18 + 12] = vertices[idx2].x;
-      aWaterVtxs[idxQuad * 18 + 13] = vertices[idx2].y;
-      aWaterVtxs[idxQuad * 18 + 14] = vertices[idx2].z;
-
-      aWaterVtxs[idxQuad * 18 + 15] = vertices[idx0].x;
-      aWaterVtxs[idxQuad * 18 + 16] = vertices[idx0].y;
-      aWaterVtxs[idxQuad * 18 + 17] = vertices[idx0].z;
-
-      // std::cout << "triangle 2: " << '\n';
-      // std::cout << vertices[idx0].x << ", " << vertices[idx0].y << ", "
-      //           << vertices[idx0].z << '\n';
-      // std::cout << vertices[idx2].x << ", " << vertices[idx2].y << ", "
-      //           << vertices[idx2].z << '\n';
-      // std::cout << vertices[idx3].x << ", " << vertices[idx3].y << ", "
-      //           << vertices[idx3].z << '\n';
-      // std::cout << '\n';
-
-      // vertex normal
-      aWaterNs[idxQuad * 18 + 9] = vertices[idx3].nx;
-      aWaterNs[idxQuad * 18 + 10] = vertices[idx3].ny;
-      aWaterNs[idxQuad * 18 + 11] = vertices[idx3].nz;
-
-      aWaterNs[idxQuad * 18 + 12] = vertices[idx2].nx;
-      aWaterNs[idxQuad * 18 + 13] = vertices[idx2].ny;
-      aWaterNs[idxQuad * 18 + 14] = vertices[idx2].nz;
-
-      aWaterNs[idxQuad * 18 + 15] = vertices[idx0].nx;
-      aWaterNs[idxQuad * 18 + 16] = vertices[idx0].ny;
-      aWaterNs[idxQuad * 18 + 17] = vertices[idx0].nz;
-
-      idxQuad++;
-    }
-  }
-}
-
-void cOcean::drawPoints() {
-  // update data
-  points.clear();
-  for (size_t i = 0; i < Nplus1 * Nplus1; i++) {
-    Point p;
-    p.pos.x = vertices[i].x;
-    p.pos.y = vertices[i].y;
-    p.pos.z = vertices[i].z;
-    points.push_back(p);
-  }
-
-  // array data
-  int nOfPs = points.size();
-  GLfloat *aPos = new GLfloat[nOfPs * 3];
-  GLfloat *aColor = new GLfloat[nOfPs * 3];
-
-  // implant data
-  for (size_t i = 0; i < nOfPs; i++) {
-    // positions
-    Point &p = points[i];
-    aPos[i * 3 + 0] = p.pos.x;
-    aPos[i * 3 + 1] = p.pos.y;
-    aPos[i * 3 + 2] = p.pos.z;
-
-    // colors
-    aColor[i * 3 + 0] = p.color.r;
-    aColor[i * 3 + 1] = p.color.g;
-    aColor[i * 3 + 2] = p.color.b;
-  }
-
-  // selete vao
-  GLuint vao;
-  glGenVertexArrays(1, &vao);
-  glBindVertexArray(vao);
-
-  // position
-  GLuint vboPos;
-  glGenBuffers(1, &vboPos);
-  glBindBuffer(GL_ARRAY_BUFFER, vboPos);
-  glBufferData(GL_ARRAY_BUFFER, nOfPs * 3 * sizeof(GLfloat), aPos,
-               GL_STATIC_DRAW);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-  glEnableVertexAttribArray(0);
-
-  // color
-  GLuint vboColor;
-  glGenBuffers(1, &vboColor);
-  glBindBuffer(GL_ARRAY_BUFFER, vboColor);
-  glBufferData(GL_ARRAY_BUFFER, nOfPs * 3 * sizeof(GLfloat), aColor,
-               GL_STREAM_DRAW);
-  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-  glEnableVertexAttribArray(1);
-
-  glDrawArrays(GL_POINTS, 0, nOfPs);
-
-  // release
-  delete[] aPos;
-  delete[] aColor;
-  glDeleteBuffers(1, &vboPos);
-  glDeleteBuffers(1, &vboColor);
-  glDeleteVertexArrays(1, &vao);
-}
-
-void cOcean::updateWaterGeometry() {
-  glBindVertexArray(vao);
-
-  // vbo for vertex position
-  glBindBuffer(GL_ARRAY_BUFFER, vboVtxs);
-  // buffer orphaning
-  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * nOfQuads * 2 * 3 * 3, NULL,
-               GL_STREAM_DRAW);
-  // write data
-  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * nOfQuads * 2 * 3 * 3,
-               aWaterVtxs, GL_STREAM_DRAW);
-
-  // vbo for vertex normal
-  glBindBuffer(GL_ARRAY_BUFFER, vboNs);
-  // buffer orphaning
-  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * nOfQuads * 2 * 3 * 3, NULL,
-               GL_STREAM_DRAW);
-  // write data
-  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * nOfQuads * 2 * 3 * 3,
-               aWaterNs, GL_STREAM_DRAW);
+        glBindVertexArray(vaos[i]);
+        glDrawArrays(GL_PATCHES, 0, numVtxs);
+      }
+    } // end for i
+  }   // end for j
 }
 
 vec3 cOcean::getVertex(int ix, int iz) {

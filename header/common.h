@@ -12,6 +12,9 @@
 #include <glm/gtx/string_cast.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/ext.hpp>
+#include <assimp/Importer.hpp>  // C++ importer interface
+#include <assimp/scene.h>       // Output data structure
+#include <assimp/postprocess.h> // Post processing flags
 
 #include <GLFW/glfw3.h>
 #include <FreeImage.h>
@@ -70,12 +73,8 @@ std::string readFile(const std::string);
 Mesh loadObj(std::string);
 void printLog(GLuint &);
 GLint myGetUniformLocation(GLuint &, string);
-GLuint buildShader(string, string);
+GLuint buildShader(string, string, string = "", string = "", string = "");
 GLuint compileShader(string, GLenum);
-GLuint linkShader(GLuint, GLuint);
-void createMesh(Mesh &);
-void updateMesh(Mesh &);
-void findAABB(Mesh &);
-void drawBox(vec3, vec3);
+GLuint linkShader(GLuint, GLuint, GLuint, GLuint, GLuint);
 
 #endif
