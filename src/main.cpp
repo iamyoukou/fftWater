@@ -93,12 +93,12 @@ int main(int argc, char *argv[]) {
                   lightColor, lightPos, resume, frameNumber);
 
     // save height map
-    if (saveMap) {
-      saveHeightMap();
-      saveNormalMap();
-
-      saveMap = false;
-    }
+    // if (saveMap) {
+    //   saveHeightMap();
+    //   saveNormalMap();
+    //
+    //   saveMap = false;
+    // }
 
     /* render to main screen */
     // glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -373,6 +373,8 @@ void saveHeightMap() {
     for (int j = 0; j < h; j++) {
       int idx = i * N + j;
 
+      // ox, oy, oz: original position
+      // x, y, z: position after simulation
       float y = ocean->vertices[idx].oy - ocean->vertices[idx].y;
       float x = ocean->vertices[idx].ox - ocean->vertices[idx].x;
       float z = ocean->vertices[idx].oz - ocean->vertices[idx].z;
@@ -394,6 +396,8 @@ void saveHeightMap() {
     for (int j = 0; j < h; j++) {
       int idx = i * N + j;
 
+      // ox, oy, oz: original position
+      // x, y, z: position after simulation
       float y = ocean->vertices[idx].oy - ocean->vertices[idx].y;
       float x = ocean->vertices[idx].ox - ocean->vertices[idx].x;
       float z = ocean->vertices[idx].oz - ocean->vertices[idx].z;
@@ -430,8 +434,9 @@ void saveHeightMap() {
     for (int j = 0; j < h; j++) {
       int idx = i * N + j;
 
+      // ox, oy, oz: original position
+      // x, y, z: position after simulation
       float x = ocean->vertices[idx].ox - ocean->vertices[idx].x;
-      // std::cout << x << '\n';
       x += abs(minDispX);
       x /= xRange;
       int ix = int(x * 255.0);
