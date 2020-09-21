@@ -50,6 +50,8 @@ cOcean::cOcean(const int N, const float A, const vec2 w, const float length)
   initUniform();
   // initReflect();
   // initRefract();
+
+  FIBITMAP *heightMap = FreeImage_Allocate(N, N, 24);
 }
 
 cOcean::~cOcean() {
@@ -145,9 +147,9 @@ void cOcean::initBuffers() {
 }
 
 void cOcean::initTexture() {
-  setTexture(tboHeight, 11, "./image/height.png", FIF_PNG);
-  setTexture(tboNormal, 12, "./image/normal.png", FIF_PNG);
-  setTexture(tboFresnel, 13, "./image/fresnel.png", FIF_PNG);
+  // setTexture(tboHeight, 11, "./image/height.png", FIF_PNG);
+  // setTexture(tboNormal, 12, "./image/normal.png", FIF_PNG);
+  // setTexture(tboFresnel, 13, "./image/fresnel.png", FIF_PNG);
 }
 
 void cOcean::initUniform() {
@@ -177,7 +179,6 @@ void cOcean::initUniform() {
   uniLightPos = myGetUniformLocation(shader, "lightPos");
 
   // other
-  uniDudvMove = myGetUniformLocation(shader, "dudvMove");
   uniEyePoint = myGetUniformLocation(shader, "eyePoint");
 }
 
@@ -373,9 +374,13 @@ void cOcean::evaluateWavesFFT(float t) {
 
 void cOcean::render(float t, mat4 M, mat4 V, mat4 P, vec3 eyePoint,
                     vec3 lightColor, vec3 lightPos, bool resume, int frameN) {
-  // if (resume) {
-  //   evaluateWavesFFT(t);
-  // }
+  if (resume) {
+    evaluateWavesFFT(t);
+  }
+
+  // write maps
+  writeHeightMap();
+  setTexture(tboHeight, 11, "./image/height.png", FIF_PNG);
 
   // update transform matrix
   glUseProgram(shader);
@@ -417,6 +422,76 @@ vec3 cOcean::getVertex(int ix, int iz) {
   vec3 vtx(vertices[idx].x, vertices[idx].y, vertices[idx].z);
 
   return vtx;
+}
+
+void cOcean::writeHeightMap() {
+  int w, h;
+  w = N;
+  h = w;
+
+  // find max, min
+  float maxHeight = 0, minHeight = 0;
+
+  // find max
+  for (int i = 0; i < w; i++) {
+    for (int j = 0; j < h; j++) {
+      int idx = i * N + j;
+
+      float y = vertices[idx].y;
+
+      if (y > maxHeight) {
+        maxHeight = y;
+      }
+    }
+  }
+
+  // find min
+  for (int i = 0; i < w; i++) {
+    for (int j = 0; j < h; j++) {
+      int idx = i * N + j;
+
+      float y = vertices[idx].y;
+
+      if (y < minHeight) {
+        minHeight = y;
+      }
+    }
+  }
+
+  // height range
+  float heightRange = maxHeight - minHeight;
+
+  FIBITMAP *bitmap = FreeImage_Allocate(w, h, 24);
+  RGBQUAD color;
+
+  for (int i = 0; i < w; i++) {
+    for (int j = 0; j < h; j++) {
+      int idx = i * N + j;
+
+      // float x = ocean->vertices[idx].x;
+      // x += 10.f;
+      // x *= 10.f;
+      // std::cout << x << '\n';
+
+      float y = vertices[idx].y;
+      y += abs(minHeight); // to non-negative
+      y /= heightRange;    // normalize
+      // std::cout << y << '\n';
+      int iy = int(y * 255.0); // to [0, 255]
+
+      // float z = ocean->vertices[idx].z;
+      // z += 10.f;
+      // z *= 10.f;
+      // std::cout << z << '\n';
+
+      color.rgbRed = iy;
+      color.rgbGreen = iy;
+      color.rgbBlue = iy;
+      FreeImage_SetPixelColor(bitmap, i, j, &color);
+    }
+  }
+
+  FreeImage_Save(FIF_PNG, bitmap, "./image/height.png", 0);
 }
 
 float uniformRandomVariable() {

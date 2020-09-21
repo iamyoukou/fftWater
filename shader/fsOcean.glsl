@@ -12,7 +12,6 @@ uniform samplerCube texSkybox;
 uniform vec3 lightColor;
 uniform vec3 lightPos;
 uniform vec3 eyePoint;
-uniform vec2 dudvMove;
 
 out vec4 fragColor;
 
@@ -32,7 +31,7 @@ void main() {
   // vec4 refr = texture(texRefract, texCoordRefract);
   vec4 refr = vec4(0.168, 0.267, 0.255, 0);
 
-  vec3 N = texture(texNormal, mod(uv + dudvMove, 1.0)).rgb * 2.0 - 1.0;
+  vec3 N = texture(texNormal, mod(uv, 1.0)).rgb * 2.0 - 1.0;
   vec3 L = normalize(lightPos - worldPos);
   vec3 V = normalize(eyePoint - worldPos);
   vec3 H = normalize(L + V);

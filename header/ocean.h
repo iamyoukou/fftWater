@@ -54,6 +54,8 @@ public:
   GLuint fboRefract, fboReflect;
   GLuint rboDepthRefract, rboDepthReflect;
 
+  FIBITMAP *heightMap;
+
 protected:
 public:
   cOcean(const int N, const float A, const vec2 w, const float length);
@@ -74,6 +76,7 @@ public:
   void initReflect();
   void initRefract();
   void setTexture(GLuint &, int, const string, FREE_IMAGE_FORMAT);
+  void writeHeightMap();
 };
 
 #endif
