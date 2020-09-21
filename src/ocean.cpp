@@ -147,9 +147,9 @@ void cOcean::initBuffers() {
 }
 
 void cOcean::initTexture() {
-  // setTexture(tboHeight, 11, "./image/height.png", FIF_PNG);
-  // setTexture(tboNormal, 12, "./image/normal.png", FIF_PNG);
-  // setTexture(tboFresnel, 13, "./image/fresnel.png", FIF_PNG);
+  setTexture(tboHeight, 11, "./image/height.png", FIF_PNG);
+  setTexture(tboNormal, 12, "./image/normal.png", FIF_PNG);
+  setTexture(tboFresnel, 13, "./image/fresnel.png", FIF_PNG);
 }
 
 void cOcean::initUniform() {
@@ -374,13 +374,17 @@ void cOcean::evaluateWavesFFT(float t) {
 
 void cOcean::render(float t, mat4 M, mat4 V, mat4 P, vec3 eyePoint,
                     vec3 lightColor, vec3 lightPos, bool resume, int frameN) {
-  if (resume) {
-    evaluateWavesFFT(t);
-  }
+  // if (resume) {
+  //   evaluateWavesFFT(t);
+  // }
 
   // write maps
-  writeHeightMap();
-  setTexture(tboHeight, 11, "./image/height.png", FIF_PNG);
+  // writeHeightMap();
+  // writeNormalMap();
+
+  // update maps
+  // setTexture(tboHeight, 11, "./image/height.png", FIF_PNG);
+  // setTexture(tboNormal, 12, "./image/normal.png", FIF_PNG);
 
   // update transform matrix
   glUseProgram(shader);
@@ -431,16 +435,26 @@ void cOcean::writeHeightMap() {
 
   // find max, min
   float maxHeight = 0, minHeight = 0;
+  float maxDispX = 0, minDispX = 0;
+  float maxDispZ = 0, minDispZ = 0;
 
   // find max
   for (int i = 0; i < w; i++) {
     for (int j = 0; j < h; j++) {
       int idx = i * N + j;
 
+      float x = vertices[idx].x;
       float y = vertices[idx].y;
+      float z = vertices[idx].z;
 
+      if (x > maxDispX) {
+        maxDispX = x;
+      }
       if (y > maxHeight) {
         maxHeight = y;
+      }
+      if (z > maxDispZ) {
+        maxDispZ = z;
       }
     }
   }
@@ -450,48 +464,106 @@ void cOcean::writeHeightMap() {
     for (int j = 0; j < h; j++) {
       int idx = i * N + j;
 
+      float x = vertices[idx].x;
       float y = vertices[idx].y;
+      float z = vertices[idx].z;
 
+      if (x < minDispX) {
+        minDispX = x;
+      }
       if (y < minHeight) {
         minHeight = y;
+      }
+      if (z < minDispZ) {
+        minDispZ = z;
       }
     }
   }
 
   // height range
   float heightRange = maxHeight - minHeight;
+  float xRange = maxDispX - minDispX;
+  float zRange = maxDispZ - minDispZ;
 
   FIBITMAP *bitmap = FreeImage_Allocate(w, h, 24);
   RGBQUAD color;
+
+  if (!bitmap) {
+    std::cout << "FreeImage: Cannot allocate image." << '\n';
+    exit(EXIT_FAILURE);
+  }
 
   for (int i = 0; i < w; i++) {
     for (int j = 0; j < h; j++) {
       int idx = i * N + j;
 
-      // float x = ocean->vertices[idx].x;
-      // x += 10.f;
-      // x *= 10.f;
-      // std::cout << x << '\n';
+      float x = vertices[idx].x;
+      x += abs(minDispX);
+      x /= xRange;
+      int ix = int(x * 255.0);
+
+      if (idx == 10) {
+        std::cout << "xBefore = " << vertices[idx].x << '\n';
+        std::cout << "xAfter = " << x << '\n';
+        std::cout << "ix = " << ix << '\n';
+        std::cout << '\n';
+      }
 
       float y = vertices[idx].y;
-      y += abs(minHeight); // to non-negative
-      y /= heightRange;    // normalize
-      // std::cout << y << '\n';
+      y += abs(minHeight);     // to non-negative
+      y /= heightRange;        // normalize
       int iy = int(y * 255.0); // to [0, 255]
 
-      // float z = ocean->vertices[idx].z;
-      // z += 10.f;
-      // z *= 10.f;
-      // std::cout << z << '\n';
+      float z = vertices[idx].z;
+      z += abs(minDispZ);
+      z /= zRange;
+      int iz = int(z * 255.0);
 
-      color.rgbRed = iy;
+      color.rgbRed = ix;
       color.rgbGreen = iy;
-      color.rgbBlue = iy;
+      color.rgbBlue = iz;
       FreeImage_SetPixelColor(bitmap, i, j, &color);
     }
   }
 
   FreeImage_Save(FIF_PNG, bitmap, "./image/height.png", 0);
+}
+
+void cOcean::writeNormalMap() {
+  int w, h;
+  w = N;
+  h = w;
+
+  FIBITMAP *bitmap = FreeImage_Allocate(w, h, 24);
+  RGBQUAD color;
+
+  if (!bitmap) {
+    std::cout << "FreeImage: Cannot allocate image." << '\n';
+    exit(EXIT_FAILURE);
+  }
+
+  for (int i = 0; i < w; i++) {
+    for (int j = 0; j < h; j++) {
+      int idx = i * N + j;
+
+      vec3 normal(vertices[idx].nx, vertices[idx].ny, vertices[idx].nz);
+      normal = normalize(normal);      // to [-1, 1]
+      normal = (normal + 1.0f) / 2.0f; // to [0, 1]
+
+      // to [0, 255]
+      int ix = int(normal.x * 255.0);
+      int iy = int(normal.y * 255.0);
+      int iz = int(normal.z * 255.0);
+
+      color.rgbRed = ix;
+      color.rgbGreen = iy;
+      color.rgbBlue = iz;
+
+      FreeImage_SetPixelColor(bitmap, i, j, &color);
+    }
+  }
+
+  FreeImage_Save(FIF_PNG, bitmap, "./image/normal.png", 0);
 }
 
 float uniformRandomVariable() {

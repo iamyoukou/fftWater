@@ -54,7 +54,7 @@ public:
   GLuint fboRefract, fboReflect;
   GLuint rboDepthRefract, rboDepthReflect;
 
-  FIBITMAP *heightMap;
+  FIBITMAP *heightMap, *normalMap;
 
 protected:
 public:
@@ -77,6 +77,7 @@ public:
   void initRefract();
   void setTexture(GLuint &, int, const string, FREE_IMAGE_FORMAT);
   void writeHeightMap();
+  void writeNormalMap();
 };
 
 #endif

@@ -25,7 +25,7 @@ ScreenQuad *screenQuad;
 bool saveTrigger = false;
 int frameNumber = 0;
 bool resume = true;
-bool saveMap = false;
+bool saveMap = true;
 
 float verticalAngle = -2.11138;
 float horizontalAngle = 3.17162;
@@ -43,7 +43,7 @@ vec3 up = vec3(0.f, 1.f, 0.f);
 mat4 model, view, projection;
 bool isRising = false, isDiving = false;
 
-vec3 lightPos = vec3(5.f, 10.f, 5.f);
+vec3 lightPos = vec3(0.f, 5.f, 0.f);
 vec3 lightColor = vec3(1.f, 1.f, 1.f);
 float lightPower = 12.f;
 
@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
   cTimer timer;
 
   // ocean simulator
-  ocean = new cOcean(N, 0.005f, vec2(16.0f, 16.0f), 16);
+  ocean = new cOcean(N, 0.005f, vec2(16.0f, 0.0f), 16);
 
   // a rough way to solve cursor position initialization problem
   // must call glfwPollEvents once to activate glfwSetCursorPos
@@ -335,7 +335,7 @@ void keyCallback(GLFWwindow *keyWnd, int key, int scancode, int action,
 }
 
 void initMatrix() {
-  model = translate(mat4(1.f), vec3(0.f, 0.f, -4.f));
+  model = translate(mat4(1.f), vec3(0.f, 0.f, 0.f));
   view = lookAt(eyePoint, eyePoint + eyeDirection, up);
   projection = perspective(initialFoV, 1.f * WINDOW_WIDTH / WINDOW_HEIGHT,
                            nearPlane, farPlane);
@@ -365,6 +365,8 @@ void saveHeightMap() {
 
   // find max, min
   float maxHeight = 0, minHeight = 0;
+  float maxDispX = 0, minDispX = 0;
+  float maxDispZ = 0, minDispZ = 0;
 
   // find max
   for (int i = 0; i < w; i++) {
@@ -372,9 +374,17 @@ void saveHeightMap() {
       int idx = i * N + j;
 
       float y = ocean->vertices[idx].y;
+      float x = ocean->vertices[idx].x;
+      float z = ocean->vertices[idx].z;
 
       if (y > maxHeight) {
         maxHeight = y;
+      }
+      if (x > maxDispX) {
+        maxDispX = x;
+      }
+      if (z > maxDispZ) {
+        maxDispZ = z;
       }
     }
   }
@@ -385,15 +395,25 @@ void saveHeightMap() {
       int idx = i * N + j;
 
       float y = ocean->vertices[idx].y;
+      float x = ocean->vertices[idx].x;
+      float z = ocean->vertices[idx].z;
 
       if (y < minHeight) {
         minHeight = y;
+      }
+      if (x < minDispX) {
+        minDispX = x;
+      }
+      if (z < minDispZ) {
+        minDispZ = z;
       }
     }
   }
 
   // height range
   float heightRange = maxHeight - minHeight;
+  float xRange = maxDispX - minDispX;
+  float zRange = maxDispZ - minDispZ;
 
   // std::cout << "maxHeight: " << maxHeight << '\n';
   // std::cout << "minHeight: " << minHeight << '\n';
@@ -410,33 +430,29 @@ void saveHeightMap() {
     for (int j = 0; j < h; j++) {
       int idx = i * N + j;
 
-      // float x = ocean->vertices[idx].x;
-      // x += 10.f;
-      // x *= 10.f;
-      // std::cout << x << '\n';
+      float x = ocean->vertices[idx].x;
+      x += abs(minDispX);
+      x /= xRange;
+      int ix = int(x * 255.0);
 
       float y = ocean->vertices[idx].y;
-      y += abs(minHeight); // to non-negative
-      y /= heightRange;    // normalize
-      // std::cout << y << '\n';
+      y += abs(minHeight);     // to non-negative
+      y /= heightRange;        // normalize
       int iy = int(y * 255.0); // to [0, 255]
 
-      // float z = ocean->vertices[idx].z;
-      // z += 10.f;
-      // z *= 10.f;
-      // std::cout << z << '\n';
+      float z = ocean->vertices[idx].z;
+      z += abs(minDispZ);
+      z /= zRange;
+      int iz = int(z * 255.0);
 
-      color.rgbRed = iy;
+      color.rgbRed = ix;
       color.rgbGreen = iy;
-      color.rgbBlue = iy;
+      color.rgbBlue = iz;
       FreeImage_SetPixelColor(bitmap, i, j, &color);
-
-      // std::cout << float(color.rgbRed) << '\n';
-      // std::cout << '\n';
     }
   }
 
-  if (FreeImage_Save(FIF_PNG, bitmap, "height.png", 0))
+  if (FreeImage_Save(FIF_PNG, bitmap, "./image/height.png", 0))
     cout << "Height map successfully saved!" << endl;
 }
 
@@ -477,6 +493,6 @@ void saveNormalMap() {
     }
   }
 
-  if (FreeImage_Save(FIF_PNG, bitmap, "normal.png", 0))
+  if (FreeImage_Save(FIF_PNG, bitmap, "./image/normal.png", 0))
     cout << "Normal map successfully saved!" << endl;
 }
