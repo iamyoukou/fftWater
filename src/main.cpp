@@ -27,14 +27,14 @@ int frameNumber = 0;
 bool resume = true;
 bool saveMap = true;
 
-float verticalAngle = -2.11138;
-float horizontalAngle = 3.17162;
+float verticalAngle = -1.8238;
+float horizontalAngle = 1.56569;
 float initialFoV = 45.0f;
 float speed = 5.0f;
 float mouseSpeed = 0.005f;
 float nearPlane = 0.01f, farPlane = 2000.f;
 
-vec3 eyePoint = vec3(-2.070296, 1.190243, -0.038279);
+vec3 eyePoint = vec3(0.097707, 0.681555, 2.229438);
 vec3 eyeDirection =
     vec3(sin(verticalAngle) * cos(horizontalAngle), cos(verticalAngle),
          sin(verticalAngle) * sin(horizontalAngle));
@@ -48,6 +48,7 @@ vec3 lightColor = vec3(1.f, 1.f, 1.f);
 float lightPower = 12.f;
 
 int N = 64;
+float t = 0.f;
 
 int main(int argc, char *argv[]) {
   initGL();
@@ -89,8 +90,12 @@ int main(int argc, char *argv[]) {
 
     // ocean
     glDisable(GL_CULL_FACE);
-    ocean->render(timer.elapsed(false), model, view, projection, eyePoint,
-                  lightColor, lightPos, resume, frameNumber);
+    ocean->render(t, model, view, projection, eyePoint, lightColor, lightPos,
+                  resume, frameNumber);
+
+    if (resume) {
+      t += 0.01f;
+    }
 
     // save height map
     // if (saveMap) {
@@ -456,7 +461,7 @@ void saveHeightMap() {
       // int iz = int(z * 255.0);
 
       color.rgbRed = iy;          // value
-      color.rgbGreen = 1;         // sign
+      color.rgbGreen = sign;      // sign
       color.rgbBlue = int(scale); // scale
       FreeImage_SetPixelColor(bitmap, i, j, &color);
     }

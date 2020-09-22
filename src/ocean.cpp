@@ -525,7 +525,7 @@ void cOcean::writeHeightMap() {
       // int iz = int(z * 255.0);
 
       color.rgbRed = iy;          // value
-      color.rgbGreen = 1;         // sign
+      color.rgbGreen = sign;      // sign
       color.rgbBlue = int(scale); // scale
       FreeImage_SetPixelColor(bitmap, i, j, &color);
     }

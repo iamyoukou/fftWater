@@ -42,7 +42,8 @@ void main() {
 
   vec3 tempY = texture(texHeight, mod(uv, 1.0)).rgb;
   float offsetY = tempY.x;
-  float signY = (tempY.y == 0) ? -1.0 : 1.0;
+  // using tempY.y < 0.01 or == 0 causes strong artifact
+  float signY = (tempY.y < 0.5) ? -1.0 : 1.0;
   float scaleY = 0.1 * (tempY.z * 255.0);
   worldPos.y += offsetY * signY * scaleY;
 
