@@ -368,70 +368,25 @@ void saveHeightMap() {
   w = N;
   h = w;
 
-  // find max, min
-  float maxHeight = 0, minHeight = 0;
-  // float maxDispX = 0, minDispX = 0;
-  // float maxDispZ = 0, minDispZ = 0;
+  FIBITMAP *bitmapY = FreeImage_Allocate(w, h, 24);
+  RGBQUAD colorY;
 
-  // find max
-  for (int i = 0; i < w; i++) {
-    for (int j = 0; j < h; j++) {
-      int idx = i * N + j;
+  FIBITMAP *bitmapX = FreeImage_Allocate(w, h, 24);
+  RGBQUAD colorX;
 
-      // ox, oy, oz: original position
-      // x, y, z: position after simulation
-      float y = ocean->vertices[idx].oy - ocean->vertices[idx].y;
-      // float x = ocean->vertices[idx].ox - ocean->vertices[idx].x;
-      // float z = ocean->vertices[idx].oz - ocean->vertices[idx].z;
+  FIBITMAP *bitmapZ = FreeImage_Allocate(w, h, 24);
+  RGBQUAD colorZ;
 
-      if (y > maxHeight) {
-        maxHeight = y;
-      }
-      // if (x > maxDispX) {
-      //   maxDispX = x;
-      // }
-      // if (z > maxDispZ) {
-      //   maxDispZ = z;
-      // }
-    }
+  if (!bitmapY) {
+    std::cout << "FreeImage: Cannot allocate bitmapY." << '\n';
+    exit(EXIT_FAILURE);
   }
-
-  // find min
-  for (int i = 0; i < w; i++) {
-    for (int j = 0; j < h; j++) {
-      int idx = i * N + j;
-
-      // ox, oy, oz: original position
-      // x, y, z: position after simulation
-      float y = ocean->vertices[idx].oy - ocean->vertices[idx].y;
-      // float x = ocean->vertices[idx].ox - ocean->vertices[idx].x;
-      // float z = ocean->vertices[idx].oz - ocean->vertices[idx].z;
-
-      if (y < minHeight) {
-        minHeight = y;
-      }
-      // if (x < minDispX) {
-      //   minDispX = x;
-      // }
-      // if (z < minDispZ) {
-      //   minDispZ = z;
-      // }
-    }
+  if (!bitmapX) {
+    std::cout << "FreeImage: Cannot allocate bitmapX." << '\n';
+    exit(EXIT_FAILURE);
   }
-
-  // height range
-  float heightRange = maxHeight - minHeight;
-  // float xRange = maxDispX - minDispX;
-  // float zRange = maxDispZ - minDispZ;
-
-  // std::cout << "maxHeight: " << maxHeight << '\n';
-  // std::cout << "minHeight: " << minHeight << '\n';
-
-  FIBITMAP *bitmap = FreeImage_Allocate(w, h, 24);
-  RGBQUAD color;
-
-  if (!bitmap) {
-    std::cout << "FreeImage: Cannot allocate image." << '\n';
+  if (!bitmapZ) {
+    std::cout << "FreeImage: Cannot allocate bitmapZ." << '\n';
     exit(EXIT_FAILURE);
   }
 
@@ -439,36 +394,47 @@ void saveHeightMap() {
     for (int j = 0; j < h; j++) {
       int idx = i * N + j;
 
-      // ox, oy, oz: original position
-      // x, y, z: position after simulation
-      // float x = ocean->vertices[idx].ox - ocean->vertices[idx].x;
-      // x += abs(minDispX);
-      // x /= xRange;
-      // int ix = int(x * 255.0);
-
-      float scale = 2.0;
+      // height
+      float scaleY = 2.0;
       float y = ocean->vertices[idx].oy - ocean->vertices[idx].y;
-      // y += abs(minHeight);     // to non-negative
-      // y /= heightRange;        // normalize
-      // int iy = int(y * 255.0); // to [0, 255]
-      int sign = (y < 0) ? 0 : 255;
-      int iy = int(abs(y) / scale * 255.0);
-      // std::cout << iy << '\n';
+      int signY = (y < 0) ? 0 : 255;
+      int iy = int(abs(y) / scaleY * 255.0);
 
-      // float z = ocean->vertices[idx].oz - ocean->vertices[idx].z;
-      // z += abs(minDispZ);
-      // z /= zRange;
-      // int iz = int(z * 255.0);
+      colorY.rgbRed = iy;           // value
+      colorY.rgbGreen = signY;      // sign
+      colorY.rgbBlue = int(scaleY); // scale
+      FreeImage_SetPixelColor(bitmapY, i, j, &colorY);
 
-      color.rgbRed = iy;          // value
-      color.rgbGreen = sign;      // sign
-      color.rgbBlue = int(scale); // scale
-      FreeImage_SetPixelColor(bitmap, i, j, &color);
+      // x-displacement
+      float scaleX = 2.0;
+      float x = ocean->vertices[idx].ox - ocean->vertices[idx].x;
+      int signX = (x < 0) ? 0 : 255;
+      int ix = int(abs(x) / scaleX * 255.0);
+
+      colorX.rgbRed = ix;           // value
+      colorX.rgbGreen = signX;      // sign
+      colorX.rgbBlue = int(scaleX); // scale
+      FreeImage_SetPixelColor(bitmapX, i, j, &colorX);
+
+      // z-displacement
+      float scaleZ = 2.0;
+      float z = ocean->vertices[idx].oz - ocean->vertices[idx].z;
+      int signZ = (z < 0) ? 0 : 255;
+      int iz = int(abs(z) / scaleZ * 255.0);
+
+      colorZ.rgbRed = iz;           // value
+      colorZ.rgbGreen = signZ;      // sign
+      colorZ.rgbBlue = int(scaleZ); // scale
+      FreeImage_SetPixelColor(bitmapZ, i, j, &colorZ);
     }
   }
 
-  if (FreeImage_Save(FIF_PNG, bitmap, "./image/height.png", 0))
+  if (FreeImage_Save(FIF_PNG, bitmapY, "./image/height.png", 0))
     cout << "Height map successfully saved!" << endl;
+  if (FreeImage_Save(FIF_PNG, bitmapX, "./image/xDisp.png", 0))
+    cout << "X-displacement map successfully saved!" << endl;
+  if (FreeImage_Save(FIF_PNG, bitmapZ, "./image/zDisp.png", 0))
+    cout << "Z-displacement map successfully saved!" << endl;
 }
 
 void saveNormalMap() {

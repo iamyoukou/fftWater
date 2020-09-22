@@ -149,7 +149,9 @@ void cOcean::initBuffers() {
 void cOcean::initTexture() {
   setTexture(tboHeight, 11, "./image/height.png", FIF_PNG);
   setTexture(tboNormal, 12, "./image/normal.png", FIF_PNG);
-  setTexture(tboFresnel, 13, "./image/fresnel.png", FIF_PNG);
+  setTexture(tboFresnel, 13, "./image/xDisp.png", FIF_PNG);
+  setTexture(tboFresnel, 14, "./image/zDisp.png", FIF_PNG);
+  setTexture(tboFresnel, 15, "./image/fresnel.png", FIF_PNG);
 }
 
 void cOcean::initUniform() {
@@ -165,12 +167,16 @@ void cOcean::initUniform() {
   uniTexRefract = myGetUniformLocation(shader, "texRefract");
   uniTexHeight = myGetUniformLocation(shader, "texHeight");
   uniTexNormal = myGetUniformLocation(shader, "texNormal");
+  uniTexDispX = myGetUniformLocation(shader, "texDispX");
+  uniTexDispZ = myGetUniformLocation(shader, "texDispZ");
   uniTexSkybox = myGetUniformLocation(shader, "texSkybox");
   uniTexFresnel = myGetUniformLocation(shader, "texFresnel");
 
   glUniform1i(uniTexHeight, 11);
   glUniform1i(uniTexNormal, 12);
-  glUniform1i(uniTexFresnel, 13);
+  glUniform1i(uniTexDispX, 13);
+  glUniform1i(uniTexDispZ, 14);
+  glUniform1i(uniTexFresnel, 15);
   glUniform1i(uniTexReflect, 3);
   glUniform1i(uniTexRefract, 2);
 
@@ -380,11 +386,13 @@ void cOcean::render(float t, mat4 M, mat4 V, mat4 P, vec3 eyePoint,
 
   // write maps
   writeHeightMap();
-  // writeNormalMap();
+  writeNormalMap();
 
   // update maps
   setTexture(tboHeight, 11, "./image/height.png", FIF_PNG);
-  // setTexture(tboNormal, 12, "./image/normal.png", FIF_PNG);
+  setTexture(tboNormal, 12, "./image/normal.png", FIF_PNG);
+  setTexture(tboHeight, 13, "./image/xDisp.png", FIF_PNG);
+  setTexture(tboHeight, 14, "./image/zDisp.png", FIF_PNG);
 
   // update transform matrix
   glUseProgram(shader);
@@ -433,70 +441,25 @@ void cOcean::writeHeightMap() {
   w = N;
   h = w;
 
-  // find max, min
-  float maxHeight = 0, minHeight = 0;
-  // float maxDispX = 0, minDispX = 0;
-  // float maxDispZ = 0, minDispZ = 0;
+  FIBITMAP *bitmapY = FreeImage_Allocate(w, h, 24);
+  RGBQUAD colorY;
 
-  // find max
-  for (int i = 0; i < w; i++) {
-    for (int j = 0; j < h; j++) {
-      int idx = i * N + j;
+  FIBITMAP *bitmapX = FreeImage_Allocate(w, h, 24);
+  RGBQUAD colorX;
 
-      // ox, oy, oz: original position
-      // x, y, z: position after simulation
-      float y = vertices[idx].oy - vertices[idx].y;
-      // float x = vertices[idx].ox - vertices[idx].x;
-      // float z = vertices[idx].oz - vertices[idx].z;
+  FIBITMAP *bitmapZ = FreeImage_Allocate(w, h, 24);
+  RGBQUAD colorZ;
 
-      if (y > maxHeight) {
-        maxHeight = y;
-      }
-      // if (x > maxDispX) {
-      //   maxDispX = x;
-      // }
-      // if (z > maxDispZ) {
-      //   maxDispZ = z;
-      // }
-    }
+  if (!bitmapY) {
+    std::cout << "FreeImage: Cannot allocate bitmapY." << '\n';
+    exit(EXIT_FAILURE);
   }
-
-  // find min
-  for (int i = 0; i < w; i++) {
-    for (int j = 0; j < h; j++) {
-      int idx = i * N + j;
-
-      // ox, oy, oz: original position
-      // x, y, z: position after simulation
-      float y = vertices[idx].oy - vertices[idx].y;
-      // float x = vertices[idx].ox - vertices[idx].x;
-      // float z = vertices[idx].oz - vertices[idx].z;
-
-      if (y < minHeight) {
-        minHeight = y;
-      }
-      // if (x < minDispX) {
-      //   minDispX = x;
-      // }
-      // if (z < minDispZ) {
-      //   minDispZ = z;
-      // }
-    }
+  if (!bitmapX) {
+    std::cout << "FreeImage: Cannot allocate bitmapX." << '\n';
+    exit(EXIT_FAILURE);
   }
-
-  // height range
-  float heightRange = maxHeight - minHeight;
-  // float xRange = maxDispX - minDispX;
-  // float zRange = maxDispZ - minDispZ;
-
-  // std::cout << "maxHeight: " << maxHeight << '\n';
-  // std::cout << "minHeight: " << minHeight << '\n';
-
-  FIBITMAP *bitmap = FreeImage_Allocate(w, h, 24);
-  RGBQUAD color;
-
-  if (!bitmap) {
-    std::cout << "FreeImage: Cannot allocate image." << '\n';
+  if (!bitmapZ) {
+    std::cout << "FreeImage: Cannot allocate bitmapZ." << '\n';
     exit(EXIT_FAILURE);
   }
 
@@ -504,34 +467,44 @@ void cOcean::writeHeightMap() {
     for (int j = 0; j < h; j++) {
       int idx = i * N + j;
 
-      // ox, oy, oz: original position
-      // x, y, z: position after simulation
-      // float x = vertices[idx].ox - vertices[idx].x;
-      // x += abs(minDispX);
-      // x /= xRange;
-      // int ix = int(x * 255.0);
-
-      float scale = 2.0;
+      // height
+      float scaleY = 2.0;
       float y = vertices[idx].oy - vertices[idx].y;
-      // y += abs(minHeight);     // to non-negative
-      // y /= heightRange;        // normalize
-      // int iy = int(y * 255.0); // to [0, 255]
-      int sign = (y < 0) ? 0 : 255;
-      int iy = int(abs(y) / scale * 255.0);
+      int signY = (y < 0) ? 0 : 255;
+      int iy = int(abs(y) / scaleY * 255.0);
 
-      // float z = vertices[idx].oz - vertices[idx].z;
-      // z += abs(minDispZ);
-      // z /= zRange;
-      // int iz = int(z * 255.0);
+      colorY.rgbRed = iy;           // value
+      colorY.rgbGreen = signY;      // sign
+      colorY.rgbBlue = int(scaleY); // scale
+      FreeImage_SetPixelColor(bitmapY, i, j, &colorY);
 
-      color.rgbRed = iy;          // value
-      color.rgbGreen = sign;      // sign
-      color.rgbBlue = int(scale); // scale
-      FreeImage_SetPixelColor(bitmap, i, j, &color);
+      // x-displacement
+      float scaleX = 2.0;
+      float x = vertices[idx].ox - vertices[idx].x;
+      int signX = (x < 0) ? 0 : 255;
+      int ix = int(abs(x) / scaleX * 255.0);
+
+      colorX.rgbRed = ix;           // value
+      colorX.rgbGreen = signX;      // sign
+      colorX.rgbBlue = int(scaleX); // scale
+      FreeImage_SetPixelColor(bitmapX, i, j, &colorX);
+
+      // z-displacement
+      float scaleZ = 2.0;
+      float z = vertices[idx].oz - vertices[idx].z;
+      int signZ = (z < 0) ? 0 : 255;
+      int iz = int(abs(z) / scaleZ * 255.0);
+
+      colorZ.rgbRed = iz;           // value
+      colorZ.rgbGreen = signZ;      // sign
+      colorZ.rgbBlue = int(scaleZ); // scale
+      FreeImage_SetPixelColor(bitmapZ, i, j, &colorZ);
     }
   }
 
-  FreeImage_Save(FIF_PNG, bitmap, "./image/height.png", 0);
+  FreeImage_Save(FIF_PNG, bitmapY, "./image/height.png", 0);
+  FreeImage_Save(FIF_PNG, bitmapX, "./image/xDisp.png", 0);
+  FreeImage_Save(FIF_PNG, bitmapZ, "./image/zDisp.png", 0);
 }
 
 void cOcean::writeNormalMap() {
