@@ -380,11 +380,11 @@ void cOcean::render(float t, mat4 M, mat4 V, mat4 P, vec3 eyePoint,
 
   // write maps
   writeHeightMap();
-  writeNormalMap();
+  // writeNormalMap();
 
   // update maps
   setTexture(tboHeight, 11, "./image/height.png", FIF_PNG);
-  setTexture(tboNormal, 12, "./image/normal.png", FIF_PNG);
+  // setTexture(tboNormal, 12, "./image/normal.png", FIF_PNG);
 
   // update transform matrix
   glUseProgram(shader);
@@ -435,8 +435,8 @@ void cOcean::writeHeightMap() {
 
   // find max, min
   float maxHeight = 0, minHeight = 0;
-  float maxDispX = 0, minDispX = 0;
-  float maxDispZ = 0, minDispZ = 0;
+  // float maxDispX = 0, minDispX = 0;
+  // float maxDispZ = 0, minDispZ = 0;
 
   // find max
   for (int i = 0; i < w; i++) {
@@ -446,18 +446,18 @@ void cOcean::writeHeightMap() {
       // ox, oy, oz: original position
       // x, y, z: position after simulation
       float y = vertices[idx].oy - vertices[idx].y;
-      float x = vertices[idx].ox - vertices[idx].x;
-      float z = vertices[idx].oz - vertices[idx].z;
+      // float x = vertices[idx].ox - vertices[idx].x;
+      // float z = vertices[idx].oz - vertices[idx].z;
 
       if (y > maxHeight) {
         maxHeight = y;
       }
-      if (x > maxDispX) {
-        maxDispX = x;
-      }
-      if (z > maxDispZ) {
-        maxDispZ = z;
-      }
+      // if (x > maxDispX) {
+      //   maxDispX = x;
+      // }
+      // if (z > maxDispZ) {
+      //   maxDispZ = z;
+      // }
     }
   }
 
@@ -469,25 +469,25 @@ void cOcean::writeHeightMap() {
       // ox, oy, oz: original position
       // x, y, z: position after simulation
       float y = vertices[idx].oy - vertices[idx].y;
-      float x = vertices[idx].ox - vertices[idx].x;
-      float z = vertices[idx].oz - vertices[idx].z;
+      // float x = vertices[idx].ox - vertices[idx].x;
+      // float z = vertices[idx].oz - vertices[idx].z;
 
       if (y < minHeight) {
         minHeight = y;
       }
-      if (x < minDispX) {
-        minDispX = x;
-      }
-      if (z < minDispZ) {
-        minDispZ = z;
-      }
+      // if (x < minDispX) {
+      //   minDispX = x;
+      // }
+      // if (z < minDispZ) {
+      //   minDispZ = z;
+      // }
     }
   }
 
   // height range
   float heightRange = maxHeight - minHeight;
-  float xRange = maxDispX - minDispX;
-  float zRange = maxDispZ - minDispZ;
+  // float xRange = maxDispX - minDispX;
+  // float zRange = maxDispZ - minDispZ;
 
   // std::cout << "maxHeight: " << maxHeight << '\n';
   // std::cout << "minHeight: " << minHeight << '\n';
@@ -506,24 +506,27 @@ void cOcean::writeHeightMap() {
 
       // ox, oy, oz: original position
       // x, y, z: position after simulation
-      float x = vertices[idx].ox - vertices[idx].x;
-      x += abs(minDispX);
-      x /= xRange;
-      int ix = int(x * 255.0);
+      // float x = vertices[idx].ox - vertices[idx].x;
+      // x += abs(minDispX);
+      // x /= xRange;
+      // int ix = int(x * 255.0);
 
+      float scale = 2.0;
       float y = vertices[idx].oy - vertices[idx].y;
-      y += abs(minHeight);     // to non-negative
-      y /= heightRange;        // normalize
-      int iy = int(y * 255.0); // to [0, 255]
+      // y += abs(minHeight);     // to non-negative
+      // y /= heightRange;        // normalize
+      // int iy = int(y * 255.0); // to [0, 255]
+      int sign = (y < 0) ? 0 : 255;
+      int iy = int(abs(y) / scale * 255.0);
 
-      float z = vertices[idx].oz - vertices[idx].z;
-      z += abs(minDispZ);
-      z /= zRange;
-      int iz = int(z * 255.0);
+      // float z = vertices[idx].oz - vertices[idx].z;
+      // z += abs(minDispZ);
+      // z /= zRange;
+      // int iz = int(z * 255.0);
 
-      color.rgbRed = ix;
-      color.rgbGreen = iy;
-      color.rgbBlue = iz;
+      color.rgbRed = iy;          // value
+      color.rgbGreen = 1;         // sign
+      color.rgbBlue = int(scale); // scale
       FreeImage_SetPixelColor(bitmap, i, j, &color);
     }
   }
