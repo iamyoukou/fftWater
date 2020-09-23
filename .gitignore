@@ -8,5 +8,7 @@ result/
 palette.png
 video/
 src/backup.cpp
-height.png
-normal.png
+image/height.png
+image/normal.png
+image/xDisp.png
+image/zDisp.png

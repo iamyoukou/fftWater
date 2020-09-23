@@ -6,9 +6,9 @@ for example, [PUBG](https://en.wikipedia.org/wiki/PlayerUnknown%27s_Battleground
 and [Sea of Thieves](https://en.wikipedia.org/wiki/Sea_of_Thieves),
 contain wide ocean scenes.
 Those oceans move in realtime and have realistic appearance.
-Basically, they are created using the well-known method proposed by [Tessendorf, 2001].
+Basically, they are created using the well-known method proposed by [1].
 
-Tessendorf states that the height of wind-waves in the open ocean
+The paper states that the height of wind-waves in the open ocean
 can be decomposed into a sum of sine and cosine waves.
 Given a set of frequencies and sampling points,
 the height can be calculated using Discrete Fourier Transform (DFT).
@@ -21,27 +21,27 @@ Their differences are just the coefficient and the conjugate exponent.
 
 # About this project
 
-[Keith Lantz](https://www.keithlantz.net/2011/10/ocean-simulation-part-one-using-the-discrete-fourier-transform/) has provided a nice implementation of [Tessendorf, 2001], and I use it as a start point.
+[Keith Lantz](https://www.keithlantz.net/2011/10/ocean-simulation-part-one-using-the-discrete-fourier-transform/) has provided a nice implementation of [1], and I use it as a start point.
 The goal of this project is to create an ocean scene which I have seen in many video games.
 It will have features as following:
 
-- Realistic appearance: reflections, refractions, foams, caustics, etc.
+-   Realistic appearance: reflections, refractions, foams, caustics, etc.
 
-- Can interact with objects (i.e. buoyancy).
+-   Can interact with objects (i.e. buoyancy).
 
-- Everything works in real time.
+-   Everything works in real time.
 
-- and so on.
+-   and so on.
 
 # Tricks to reduce cost
 
 There are `three` things to calculate each frame.
 
-1. Height (`Eq. 19`). (`1` dimension, `1` IFFT)
+1.  Height (`Eq. 19`). (`1` dimension, `1` IFFT)
 
-2. Normal (`Eq. 20`). (`2` dimension, `2` IFFT)
+2.  Normal (`Eq. 20`). (`2` dimension, `2` IFFT)
 
-3. Horizontal displacement (`Eq. 29`). (`2` dimension, `2` IFFT)
+3.  Horizontal displacement (`Eq. 29`). (`2` dimension, `2` IFFT)
 
 Normally, `5` IFFT are needed `per frame`,
 as each equation has different frequency term.
@@ -58,7 +58,7 @@ Then, access that table when performing IFFT in each frame.
 
 Using standard FFT codes (e.g. [Cooley–Tukey FFT](https://rosettacode.org/wiki/Fast_Fourier_transform#C.2B.2B)) results in incorrect geometry changes.
 Generally, standard FFT assumes that the sampling position is non-negative.
-However, the wave vectors used in [Tessendorf, 2001] have negative components.
+However, the wave vectors used in [1] have negative components.
 This constraint guarantees the variety of wave directions.
 For example, if a wave vector only has non-negative components,
 its direction will always reside in `[+x, +z]` and `[-x, -z]` orthants, and hence,
@@ -66,26 +66,27 @@ waves with directions within `[-x, +z]` and `[+x, -z]` orthants are lost.
 
 Furthermore, a standard FFT assumes that the range of summation is also non-negative.
 Based on this constraint, it designs the complex exponent set and iterations.
-However, the range used in [Tessendorf, 2001] is `[-N/2, N/2)`, with `N` representing the number of sampling points.
+However, the range used in [1] is `[-N/2, N/2)`, with `N` representing the number of sampling points.
 It means that a different set of complex exponents should be used.
-Therefore, a special IFFT must be designed for [Tessendorf, 2001].
+Therefore, a special IFFT must be designed for [1].
 
-# Stormy effect
+# Result
 
-A stormy or calm ocean can be easily obtained using a scaling matrix.
+I have modified [Keith Lantz's code](https://github.com/klantz81/ocean-simulation/tree/master/src) and it can be run on `OSX` now.
 
-```
-mat4 newModel = scale(mat4(1.f), vec3(sx, sy, sz));
-glUniformMatrix4fv(uniformOceanModel, 1, GL_FALSE, value_ptr(newModel));
-glDrawArrays(GL_TRIANGLES, 0, nOfTriangles);
-```
+## Level of Detail (LOD)
 
-If the difference between the vertical scaling `sy`
-and the horizontal scaling `(sx, xz)` is small,
-we will have a stormy ocean.
-Otherwise, we will have a relatively calm ocean.
+When rendering a wide ocean,
+LOD is always a good choice to improve performance.
 
-# Underwater
+For each frame, first, render a height map, a xz-displacement map and a normal map [3].
+Second, sampling those maps both in tessellation shader and fragment shader.
+
+For example, in the demo, a 4-vertex quad is subdivided into a `64x64` grid based on the distance between `eyePoint` and a vertex.
+
+![withLOD](./withLOD.gif)
+
+## Underwater
 
 When the eye point is underwater, mix the frame with a blue-green color
 to obtain an underwater effect.
@@ -101,14 +102,10 @@ This strategy can make the artifact unnoticeable.
 
 ![underwater](./underwater.gif)
 
-# Result
-
-I have modified [Keith Lantz's code](https://github.com/klantz81/ocean-simulation/tree/master/src) and it can be run on `OSX` now.
-
-![output](./output.gif)
-
-
 # Reference
-[Tessendorf, 2001] Tessendorf, Jerry. "Simulating ocean water." Simulating nature: realistic and interactive techniques. SIGGRAPH 1.2 (2001): 5.
 
-[Ang, 2018] Ang, Nigel, et al. "The technical art of sea of thieves." ACM SIGGRAPH 2018 Talks. 2018. 1-2. ([link](https://dl.acm.org/doi/10.1145/3214745.3214820), including video)
+[1] Tessendorf, Jerry. "Simulating ocean water." Simulating nature: realistic and interactive techniques. SIGGRAPH 1.2 (2001): 5.
+
+[2] Ang, Nigel, et al. "The technical art of sea of thieves." ACM SIGGRAPH 2018 Talks. 2018. 1-2. ([link](https://dl.acm.org/doi/10.1145/3214745.3214820), including video)
+
+[3] An introduction to Realistic Ocean Rendering through FFT - Fabio Suriano - Codemotion Rome 2017 ([slide](https://www.slideshare.net/Codemotion/an-introduction-to-realistic-ocean-rendering-through-fft-fabio-suriano-codemotion-rome-2017), [video](https://www.youtube.com/watch?v=ClW3fo94KR4))
