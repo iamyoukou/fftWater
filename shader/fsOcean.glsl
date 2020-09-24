@@ -27,9 +27,9 @@ void main() {
 
   texCoordRefract = clamp(texCoordRefract, 0.001, 0.999);
 
-  // vec4 refl = texture(texReflect, texCoordReflect);
+  vec4 refl = texture(texReflect, texCoordReflect);
   // vec4 refr = texture(texRefract, texCoordRefract);
-  vec4 refl = vec4(0.69, 0.84, 1, 0);
+  // vec4 refl = vec4(0.69, 0.84, 1, 0);
   vec4 refr = vec4(0.168, 0.267, 0.255, 0);
 
   vec3 N = texture(texNormal, mod(uv, 1.0)).rgb * 2.0 - 1.0;
@@ -46,10 +46,10 @@ void main() {
 
   float dist = length(lightPos - worldPos);
   dist = 1.0 / (dist * dist);
-  vec4 sun = sunColor * sunFactor * max(pow(dot(N, H), 10.0), 0.0) * dist;
+  vec4 sun = sunColor * sunFactor * max(pow(dot(N, H), 130.0), 0.0) * dist;
   vec4 sky = texture(texSkybox, R);
 
   fragColor = mix(sky, refl, 0.5);
   fragColor = mix(refr, fragColor, fresnel);
-  // fragColor += sun;
+  fragColor += sun;
 }

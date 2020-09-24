@@ -84,6 +84,8 @@ Second, sampling those maps both in tessellation shader and fragment shader.
 
 For example, in the demo, a 4-vertex quad is subdivided into a `64x64` grid based on the distance between `eyePoint` and a vertex.
 
+The shading code is based on [4].
+
 ![withLOD](./withLOD.gif)
 
 ## Underwater
@@ -102,6 +104,11 @@ This strategy can make the artifact unnoticeable.
 
 ![underwater](./underwater.gif)
 
+# Problem
+
+Currently, the result (`512x512` FFT resolution) is not rendered in realtime.
+A GPU-based parallelization is necessary for that purpose.
+
 # Reference
 
 [1] Tessendorf, Jerry. "Simulating ocean water." Simulating nature: realistic and interactive techniques. SIGGRAPH 1.2 (2001): 5.
@@ -109,3 +116,5 @@ This strategy can make the artifact unnoticeable.
 [2] Ang, Nigel, et al. "The technical art of sea of thieves." ACM SIGGRAPH 2018 Talks. 2018. 1-2. ([link](https://dl.acm.org/doi/10.1145/3214745.3214820), including video)
 
 [3] An introduction to Realistic Ocean Rendering through FFT - Fabio Suriano - Codemotion Rome 2017 ([slide](https://www.slideshare.net/Codemotion/an-introduction-to-realistic-ocean-rendering-through-fft-fabio-suriano-codemotion-rome-2017), [video](https://www.youtube.com/watch?v=ClW3fo94KR4))
+
+[4] Claes, J. "Real-time water rendering-introducing the projected grid concept." Master's thesis (2004).

@@ -1,5 +1,7 @@
 #include "ocean.h"
 
+const float cOcean::BASELINE = 0.f;
+
 cOcean::cOcean(const int N, const float A, const vec2 w, const float length)
     : g(9.81), N(N), Nplus1(N + 1), A(A), w(w), length(length), vertices(0),
       h_tilde(0), h_tilde_slopex(0), h_tilde_slopez(0), h_tilde_dx(0),
@@ -48,8 +50,8 @@ cOcean::cOcean(const int N, const float A, const vec2 w, const float length)
   initBuffers();
   initTexture();
   initUniform();
-  // initReflect();
-  // initRefract();
+  initReflect();
+  initRefract();
 
   FIBITMAP *heightMap = FreeImage_Allocate(N, N, 24);
 }
@@ -542,6 +544,67 @@ void cOcean::writeNormalMap() {
   }
 
   FreeImage_Save(FIF_PNG, bitmap, "./image/normal.png", 0);
+}
+
+void cOcean::initReflect() {
+  // framebuffer object
+  glGenFramebuffers(1, &fboReflect);
+  glBindFramebuffer(GL_FRAMEBUFFER, fboReflect);
+
+  glActiveTexture(GL_TEXTURE0 + 3);
+  glGenTextures(1, &tboReflect);
+  glBindTexture(GL_TEXTURE_2D, tboReflect);
+
+  // On OSX, must use WINDOW_WIDTH * 2 and WINDOW_HEIGHT * 2, don't know why
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, WINDOW_WIDTH * 2, WINDOW_HEIGHT * 2, 0,
+               GL_RGB, GL_UNSIGNED_BYTE, 0);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, tboReflect, 0);
+
+  // The depth buffer
+  // User-defined framebuffer must have a depth buffer to enable depth test
+  glGenRenderbuffers(1, &rboDepthReflect);
+  glBindRenderbuffer(GL_RENDERBUFFER, rboDepthReflect);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, WINDOW_WIDTH * 2,
+                        WINDOW_HEIGHT * 2);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                            GL_RENDERBUFFER, rboDepthReflect);
+
+  glDrawBuffer(GL_COLOR_ATTACHMENT2);
+}
+
+void cOcean::initRefract() {
+  // framebuffer object
+  glGenFramebuffers(1, &fboRefract);
+  glBindFramebuffer(GL_FRAMEBUFFER, fboRefract);
+
+  glActiveTexture(GL_TEXTURE0 + 2);
+  glGenTextures(1, &tboRefract);
+  glBindTexture(GL_TEXTURE_2D, tboRefract);
+
+  // On OSX, must use WINDOW_WIDTH * 2 and WINDOW_HEIGHT * 2, don't know why
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, WINDOW_WIDTH * 2, WINDOW_HEIGHT * 2, 0,
+               GL_RGB, GL_UNSIGNED_BYTE, 0);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, tboRefract, 0);
+
+  // The depth buffer
+  // User-defined framebuffer must have a depth buffer to enable depth test
+  glGenRenderbuffers(1, &rboDepthRefract);
+  glBindRenderbuffer(GL_RENDERBUFFER, rboDepthRefract);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, WINDOW_WIDTH * 2,
+                        WINDOW_HEIGHT * 2);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                            GL_RENDERBUFFER, rboDepthRefract);
+
+  glDrawBuffer(GL_COLOR_ATTACHMENT1);
 }
 
 float uniformRandomVariable() {

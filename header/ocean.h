@@ -39,6 +39,8 @@ public:
   Assimp::Importer importer;
   const aiScene *scene;
 
+  static const float BASELINE;
+
   vector<GLuint> vboVtxs, vboUvs, vboNmls;
   vector<GLuint> vaos;
 

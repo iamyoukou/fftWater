@@ -22,19 +22,19 @@ Skybox *skybox;
 cOcean *ocean;
 ScreenQuad *screenQuad;
 
-bool saveTrigger = false;
+bool saveTrigger = true;
 int frameNumber = 0;
 bool resume = true;
 bool saveMap = true;
 
-float verticalAngle = -1.8238;
-float horizontalAngle = 1.56569;
+float verticalAngle = -2.7238;
+float horizontalAngle = 1.56069;
 float initialFoV = 45.0f;
 float speed = 5.0f;
 float mouseSpeed = 0.005f;
 float nearPlane = 0.01f, farPlane = 2000.f;
 
-vec3 eyePoint = vec3(0.097707, 0.681555, 2.229438);
+vec3 eyePoint = vec3(0.053194, 1.585793, 0.925184);
 vec3 eyeDirection =
     vec3(sin(verticalAngle) * cos(horizontalAngle), cos(verticalAngle),
          sin(verticalAngle) * sin(horizontalAngle));
@@ -43,11 +43,17 @@ vec3 up = vec3(0.f, 1.f, 0.f);
 mat4 model, view, projection;
 bool isRising = false, isDiving = false;
 
+// for reflection texture
+float verticalAngleReflect;
+float horizontalAngleReflect;
+vec3 eyePointReflect;
+mat4 reflectV;
+
 vec3 lightPos = vec3(0.f, 5.f, 0.f);
 vec3 lightColor = vec3(1.f, 1.f, 1.f);
 float lightPower = 12.f;
 
-int N = 64;
+int N = 512;
 float t = 0.f;
 
 int main(int argc, char *argv[]) {
@@ -58,8 +64,6 @@ int main(int argc, char *argv[]) {
   skybox = new Skybox();
 
   screenQuad = new ScreenQuad();
-
-  cTimer timer;
 
   // ocean simulator
   ocean = new cOcean(N, 0.005f, vec2(16.0f, 0.0f), 16);
@@ -72,20 +76,51 @@ int main(int argc, char *argv[]) {
 
   /* Loop until the user closes the window */
   while (!glfwWindowShouldClose(window)) {
+    glClearColor(97 / 256.f, 175 / 256.f, 239 / 256.f, 1.0f);
+
     // view control
     computeMatricesFromInputs();
 
-    /* render to framebuffer */
-    // glBindFramebuffer(GL_FRAMEBUFFER, screenQuad->fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    // clear framebuffer
-    glClearColor(97 / 256.f, 175 / 256.f, 239 / 256.f, 1.0f);
+    /* render to refraction texture */
+    // for user-defined framebuffer,
+    // must clear the depth buffer before rendering to enable depth test
+    glBindFramebuffer(GL_FRAMEBUFFER, ocean->fboRefract);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // clipping
+    glEnable(GL_CLIP_DISTANCE0);
+    glDisable(GL_CLIP_DISTANCE1);
+
+    vec4 clipPlane0 = vec4(0, -1, 0, cOcean::BASELINE);
 
     // skybox
     // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glEnable(GL_CULL_FACE);
+    skybox->draw(model, view, projection, eyePoint);
+
+    /* render to reflection texture */
+    // for user-defined framebuffer,
+    // must clear the depth buffer before rendering to enable depth test
+    glBindFramebuffer(GL_FRAMEBUFFER, ocean->fboReflect);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // clipping
+    glDisable(GL_CLIP_DISTANCE0);
+    glEnable(GL_CLIP_DISTANCE1);
+
+    vec4 clipPlane1 = vec4(0.f, 1.f, 0.f, cOcean::BASELINE + 0.125f);
+
+    // draw scene
+    skybox->draw(model, reflectV, projection, eyePointReflect);
+
+    /* render to main screen */
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glDisable(GL_CLIP_DISTANCE0);
+    glDisable(GL_CLIP_DISTANCE1);
+
+    // sky
     skybox->draw(model, view, projection, eyePoint);
 
     // ocean
@@ -224,17 +259,30 @@ void computeMatricesFromInputs() {
   // restrict viewing angles
   // verticalAngle = glm::clamp(verticalAngle, -2.0f, -0.75f);
 
+  horizontalAngleReflect = horizontalAngle;
+  verticalAngleReflect = 3.1415f - verticalAngle;
+
   // Direction : Spherical coordinates to Cartesian coordinates conversion
   vec3 direction =
       vec3(sin(verticalAngle) * cos(horizontalAngle), cos(verticalAngle),
            sin(verticalAngle) * sin(horizontalAngle));
 
+  vec3 directionReflect =
+      vec3(sin(verticalAngleReflect) * cos(horizontalAngleReflect),
+           cos(verticalAngleReflect),
+           sin(verticalAngleReflect) * sin(horizontalAngleReflect));
+
   // Right vector
   vec3 right = vec3(cos(horizontalAngle - 3.14 / 2.f), 0.f,
                     sin(horizontalAngle - 3.14 / 2.f));
 
+  vec3 rightReflect = vec3(cos(horizontalAngleReflect - 3.14 / 2.f), 0.f,
+                           sin(horizontalAngleReflect - 3.14 / 2.f));
+
   // new up vector
   vec3 newUp = cross(right, direction);
+
+  vec3 newUpReflect = cross(rightReflect, directionReflect);
 
   // restrict movements, can only move horizontally
   // vec3 forwardDir = normalize(vec3(direction.x, 0, direction.z));
@@ -288,10 +336,17 @@ void computeMatricesFromInputs() {
     }
   }
 
+  float dist = 2.f * (eyePoint.y - cOcean::BASELINE);
+  eyePointReflect = vec3(eyePoint.x, eyePoint.y - dist, eyePoint.z);
+
   // update transform matrix
   view = lookAt(eyePoint, eyePoint + direction, newUp);
   projection = perspective(initialFoV, 1.f * WINDOW_WIDTH / WINDOW_HEIGHT,
                            nearPlane, farPlane);
+
+  // for reflect
+  reflectV =
+      lookAt(eyePointReflect, eyePointReflect + directionReflect, newUpReflect);
 
   // For the next frame, the "last time" will be "now"
   lastTime = currentTime;
