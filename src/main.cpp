@@ -27,14 +27,14 @@ int frameNumber = 0;
 bool resume = true;
 bool saveMap = true;
 
-float verticalAngle = -2.7238;
-float horizontalAngle = 1.56069;
+float verticalAngle = -1.79557;
+float horizontalAngle = 3.16513;
 float initialFoV = 45.0f;
 float speed = 5.0f;
 float mouseSpeed = 0.005f;
 float nearPlane = 0.01f, farPlane = 2000.f;
 
-vec3 eyePoint = vec3(0.053194, 1.585793, 0.925184);
+vec3 eyePoint = vec3(-36.338406, 1.624817, 1.602868);
 vec3 eyeDirection =
     vec3(sin(verticalAngle) * cos(horizontalAngle), cos(verticalAngle),
          sin(verticalAngle) * sin(horizontalAngle));
@@ -125,8 +125,9 @@ int main(int argc, char *argv[]) {
 
     // ocean
     glDisable(GL_CULL_FACE);
-    ocean->render(t, model, view, projection, eyePoint, lightColor, lightPos,
-                  resume, frameNumber);
+    vec3 tempLightPos = eyePoint + vec3(2.0, 4.0, 2.0);
+    ocean->render(t, model, view, projection, eyePoint, lightColor,
+                  tempLightPos, resume, frameNumber);
 
     if (resume) {
       t += 0.01f;

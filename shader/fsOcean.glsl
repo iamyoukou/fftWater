@@ -52,4 +52,10 @@ void main() {
   fragColor = mix(sky, refl, 0.5);
   fragColor = mix(refr, fragColor, fresnel);
   fragColor += sun;
+
+  // farther the ocean, flatter the appearance
+  float dist2 = max(length(eyePoint - worldPos), 0.01);
+  dist2 = 1.0 / dist2;
+
+  fragColor = mix(fragColor, refr, 1 - dist2);
 }

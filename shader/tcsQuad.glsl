@@ -15,14 +15,13 @@ out vec3 esInN[];
 float getTessLevel(float dist0, float dist1) {
   float avgDist = (dist0 + dist1) / 2.0;
 
-  // if (avgDist <= 2.0) {
-  //   return 128.0;
-  // } else if (avgDist <= 4.0) {
-  //   return 64.0;
-  // } else {
-  //   return 1.0;
-  // }
-  return 64.0;
+  if (avgDist <= 8.0) {
+    return 128.0;
+  } else if (avgDist <= 16.0) {
+    return 32.0;
+  } else {
+    return 2.0;
+  }
 }
 
 void main() {

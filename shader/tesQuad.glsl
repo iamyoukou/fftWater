@@ -4,6 +4,7 @@ layout(quads, equal_spacing, ccw) in;
 
 uniform mat4 M, V, P;
 uniform sampler2D texHeight, texNormal, texDispX, texDispZ;
+uniform vec3 eyePoint;
 
 in vec3 esInWorldPos[];
 in vec2 esInUv[];
@@ -40,26 +41,30 @@ void main() {
   uv = interpolate(esInUv[0], esInUv[1], esInUv[2], esInUv[3]);
   worldN = interpolate(esInN[0], esInN[1], esInN[2], esInN[3]);
 
+  // a parameter to reduce artifact at the distant place
+  float alpha = max(length(eyePoint - worldPos), 0.01);
+  alpha = exp(-0.05 * alpha);
+
   // height map
   vec3 tempY = texture(texHeight, mod(uv, 1.0)).rgb;
   float offsetY = tempY.x;
   // using tempY.y < 0.01 or == 0 causes strong artifact
   float signY = (tempY.y < 0.5) ? -1.0 : 1.0;
-  float scaleY = 0.1 * (tempY.z * 255.0);
+  float scaleY = 0.3 * (tempY.z * 255.0) * alpha;
   worldPos.y += offsetY * signY * scaleY;
 
   // x-displacement
   vec3 tempX = texture(texDispX, mod(uv, 1.0)).rgb;
   float offsetX = tempX.x;
   float signX = (tempX.y < 0.5) ? -1.0 : 1.0;
-  float scaleX = 0.1 * (tempX.z * 255.0);
+  float scaleX = 0.3 * (tempX.z * 255.0) * alpha;
   worldPos.x += offsetX * signX * scaleX;
 
   // z-displacement
   vec3 tempZ = texture(texDispZ, mod(uv, 1.0)).rgb;
   float offsetZ = tempZ.x;
   float signZ = (tempZ.y < 0.5) ? -1.0 : 1.0;
-  float scaleZ = 0.1 * (tempZ.z * 255.0);
+  float scaleZ = 0.3 * (tempZ.z * 255.0) * alpha;
   worldPos.z += offsetZ * signZ * scaleZ;
 
   gl_Position = P * V * vec4(worldPos, 1.0);

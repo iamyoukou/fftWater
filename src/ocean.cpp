@@ -44,7 +44,7 @@ cOcean::cOcean(const int N, const float A, const vec2 w, const float length)
   }
 
   // import water mesh
-  scene = importer.ReadFile("./mesh/quad.obj", aiProcess_CalcTangentSpace);
+  scene = importer.ReadFile("./mesh/gridQuad.obj", aiProcess_CalcTangentSpace);
 
   initShader();
   initBuffers();
@@ -415,8 +415,7 @@ void cOcean::render(float t, mat4 M, mat4 V, mat4 P, vec3 eyePoint,
       // decrease the difference between scaleY and (scaleX, scaleZ)
       // e.g. vec3(10.f, 10.f, 10.f)
       // on the other hand, (10.f, 2.5f, 10.f) gives a relatively calm ocean
-      mat4 Model = scale(mat4(1.0f), vec3(1.f, 1.f, 1.f));
-      Model = translate(Model, vec3(length * i, 0, length * -j));
+      mat4 Model = translate(mat4(1.0f), vec3(2.0 * i, 0, -2.0 * j));
       glUniformMatrix4fv(uniM, 1, GL_FALSE, value_ptr(Model));
 
       for (size_t i = 0; i < scene->mNumMeshes; i++) {

@@ -88,6 +88,8 @@ The shading code is based on [4].
 
 ![withLOD](./withLOD.gif)
 
+![withLOD2](./withLOD2.gif)
+
 ## Underwater
 
 When the eye point is underwater, mix the frame with a blue-green color

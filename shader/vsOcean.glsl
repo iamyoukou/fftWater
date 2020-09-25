@@ -10,7 +10,12 @@ out vec3 worldN;
 uniform mat4 M;
 
 void main() {
-  uv = vtxUv;
+  // for quad
+  // uv = vtxUv;
+
+  // for grid quad
+  // uv = vtxUv * numOfCellsPerEdge
+  uv = vtxUv * 16.0;
 
   worldPos = (M * vec4(vtxCoord, 1.0)).xyz;
 
