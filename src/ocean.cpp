@@ -151,8 +151,8 @@ void cOcean::initBuffers() {
 void cOcean::initTexture() {
   setTexture(tboHeight, 11, "./image/height.png", FIF_PNG);
   setTexture(tboNormal, 12, "./image/normal.png", FIF_PNG);
-  setTexture(tboFresnel, 13, "./image/xDisp.png", FIF_PNG);
-  setTexture(tboFresnel, 14, "./image/zDisp.png", FIF_PNG);
+  setTexture(tboDispX, 13, "./image/xDisp.png", FIF_PNG);
+  setTexture(tboDispZ, 14, "./image/zDisp.png", FIF_PNG);
   setTexture(tboFresnel, 15, "./image/fresnel.png", FIF_PNG);
 }
 
@@ -393,8 +393,8 @@ void cOcean::render(float t, mat4 M, mat4 V, mat4 P, vec3 eyePoint,
   // update maps
   setTexture(tboHeight, 11, "./image/height.png", FIF_PNG);
   setTexture(tboNormal, 12, "./image/normal.png", FIF_PNG);
-  setTexture(tboHeight, 13, "./image/xDisp.png", FIF_PNG);
-  setTexture(tboHeight, 14, "./image/zDisp.png", FIF_PNG);
+  setTexture(tboDispX, 13, "./image/xDisp.png", FIF_PNG);
+  setTexture(tboDispZ, 14, "./image/zDisp.png", FIF_PNG);
 
   // update transform matrix
   glUseProgram(shader);
