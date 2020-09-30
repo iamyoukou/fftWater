@@ -1,4 +1,4 @@
-CXX=llvm-g++
+CXX=g++-10
 INCS=-c -std=c++17 \
 -I/usr/local/Cellar/glew/2.1.0_1/include \
 -I/usr/local/Cellar/glfw/3.3.2/include \
@@ -24,28 +24,28 @@ test: test.o
 	$(CXX) $(LIBS) $^ -o $@
 
 test.o: $(SRC_DIR)/test.cpp
-	$(CXX) -c $(INCS) $^ -o $@
+	$(CXX) $(INCS) $^ -o $@
 
 main.o: $(SRC_DIR)/main.cpp
-	$(CXX) -c $(INCS) $^ -o $@
+	$(CXX) $(INCS) $^ -o $@
 
 common.o: $(SRC_DIR)/common.cpp
-	$(CXX) -c $(INCS) $^ -o $@
+	$(CXX) $(INCS) $^ -o $@
 
 fft.o:$(SRC_DIR)/fft.cpp
-	$(CXX) -c $(INCS) $^ -o $@
+	$(CXX) $(INCS) $^ -o $@
 
 timer.o: $(SRC_DIR)/timer.cpp
-	$(CXX) -c $(INCS) $^ -o $@
+	$(CXX) $(INCS) $^ -o $@
 
 ocean.o: $(SRC_DIR)/ocean.cpp
-	$(CXX) -c $(INCS) $^ -o $@
+	$(CXX) $(INCS) $^ -o $@
 
 skybox.o: $(SRC_DIR)/skybox.cpp
-	$(CXX) -c $(INCS) $^ -o $@
+	$(CXX) $(INCS) $^ -o $@
 
 screenQuad.o: $(SRC_DIR)/screenQuad.cpp
-	$(CXX) -c $(INCS) $^ -o $@
+	$(CXX) $(INCS) $^ -o $@
 
 .PHONY: cleanObj cleanImg video
 

@@ -109,7 +109,12 @@ This strategy can make the artifact unnoticeable.
 # Problem
 
 Currently, the result (`512x512` FFT resolution) is not rendered in realtime.
-A GPU-based parallelization is necessary for that purpose.
+
+I have tried OpenMP with `8` threads (max threads on my device).
+It can reduce the rendering time from about `1.2s` per frame to about `0.65s` per frame.
+But this is not enough for realtime purpose.
+
+A GPU-based parallelization is needed.
 
 # Reference
 
