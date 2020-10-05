@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
 
     // ocean
     glDisable(GL_CULL_FACE);
-    vec3 tempLightPos = eyePoint + vec3(2.0, 4.0, 2.0);
+    vec3 tempLightPos = eyePoint + vec3(4.0, 2.0, 0.0);
     ocean->render(t, model, view, projection, eyePoint, lightColor,
                   tempLightPos, resume, frameNumber);
 
