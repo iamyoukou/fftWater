@@ -1,4 +1,5 @@
 #include "ocean.h"
+#include "common.h"
 
 const float cOcean::BASELINE = 0.f;
 
@@ -269,9 +270,10 @@ void cOcean::evaluateWavesFFT(float t) {
   float kx, kz, len, lambda = -1.0f;
   int index, index1;
 
+#pragma omp parallel for private(kx, kz, len, index) collapse(2) num_threads(4)
   for (int m_prime = 0; m_prime < N; m_prime++) {
-    kz = M_PI * (2.0f * m_prime - N) / length;
     for (int n_prime = 0; n_prime < N; n_prime++) {
+      kz = M_PI * (2.0f * m_prime - N) / length;
       kx = M_PI * (2 * n_prime - N) / length;
       len = sqrt(kx * kx + kz * kz);
       index = m_prime * N + n_prime;
@@ -287,8 +289,8 @@ void cOcean::evaluateWavesFFT(float t) {
         h_tilde_dx[index] = h_tilde[index] * Complex(0, -kx / len);
         h_tilde_dz[index] = h_tilde[index] * Complex(0, -kz / len);
       }
-    }
-  }
+    } // end inner for
+  }   // end outer for
 
   for (int m_prime = 0; m_prime < N; m_prime++) {
     fft->fft(h_tilde, h_tilde, 1, m_prime * N);
@@ -308,6 +310,9 @@ void cOcean::evaluateWavesFFT(float t) {
   int sign;
   float signs[] = {1.0f, -1.0f};
   vec3 n;
+
+#pragma omp parallel for private(index, index1, sign, n) collapse(2)           \
+    num_threads(4)
   for (int m_prime = 0; m_prime < N; m_prime++) {
     for (int n_prime = 0; n_prime < N; n_prime++) {
       index = m_prime * N + n_prime;       // index into h_tilde..

@@ -22,7 +22,7 @@ Skybox *skybox;
 cOcean *ocean;
 ScreenQuad *screenQuad;
 
-bool saveTrigger = true;
+bool saveTrigger = false;
 int frameNumber = 0;
 bool resume = true;
 bool saveMap = true;
@@ -126,8 +126,12 @@ int main(int argc, char *argv[]) {
     // ocean
     glDisable(GL_CULL_FACE);
     vec3 tempLightPos = eyePoint + vec3(4.0, 2.0, 0.0);
+
+    double start = omp_get_wtime();
     ocean->render(t, model, view, projection, eyePoint, lightColor,
                   tempLightPos, resume, frameNumber);
+    double end = omp_get_wtime();
+    std::cout << end - start << '\n';
 
     if (resume) {
       t += 0.01f;
