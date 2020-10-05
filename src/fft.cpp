@@ -1,4 +1,5 @@
 #include "fft.h"
+#include "common.h"
 
 cFFT::cFFT(unsigned int N) : N(N), reversed(0), W(0), pi2(2 * M_PI) {
   c[0] = c[1] = 0;
@@ -59,21 +60,24 @@ void cFFT::fft(Complex *input, Complex *output, int stride, int offset) {
   int size = 1 << 1;
   int size_over_2 = 1;
   int w_ = 0;
+
   for (int i = 1; i <= log_2_N; i++) {
     which ^= 1;
+
+#pragma omp parallel for num_threads(4)
     for (int j = 0; j < loops; j++) {
       for (int k = 0; k < size_over_2; k++) {
         c[which][size * j + k] =
             c[which ^ 1][size * j + k] +
             c[which ^ 1][size * j + size_over_2 + k] * W[w_][k];
       }
-
       for (int k = size_over_2; k < size; k++) {
         c[which][size * j + k] =
             c[which ^ 1][size * j - size_over_2 + k] -
             c[which ^ 1][size * j + k] * W[w_][k - size_over_2];
       }
     }
+
     loops >>= 1;
     size <<= 1;
     size_over_2 <<= 1;

@@ -381,8 +381,8 @@ void cOcean::evaluateWavesFFT(float t) {
         vertices[index1 + Nplus1 * N].ny = n.y;
         vertices[index1 + Nplus1 * N].nz = n.z;
       }
-    }
-  }
+    } // inner for
+  }   // outer for
 }
 
 void cOcean::render(float t, mat4 M, mat4 V, mat4 P, vec3 eyePoint,
