@@ -22,7 +22,7 @@ Skybox *skybox;
 cOcean *ocean;
 ScreenQuad *screenQuad;
 
-bool saveTrigger = false;
+bool saveTrigger = true;
 int frameNumber = 0;
 bool resume = true;
 bool saveMap = true;
@@ -39,6 +39,8 @@ vec3 eyeDirection =
     vec3(sin(verticalAngle) * cos(horizontalAngle), cos(verticalAngle),
          sin(verticalAngle) * sin(horizontalAngle));
 vec3 up = vec3(0.f, 1.f, 0.f);
+
+vec3 direction;
 
 mat4 model, view, projection;
 bool isRising = false, isDiving = false;
@@ -125,13 +127,14 @@ int main(int argc, char *argv[]) {
 
     // ocean
     glDisable(GL_CULL_FACE);
-    vec3 tempLightPos = eyePoint + vec3(4.0, 2.0, 0.0);
+    vec3 tempLightPos =
+        eyePoint + vec3(direction.x * 4.0, 2.0, direction.z * 4.0);
 
-    double start = omp_get_wtime();
+    // double start = omp_get_wtime();
     ocean->render(t, model, view, projection, eyePoint, lightColor,
                   tempLightPos, resume, frameNumber);
-    double end = omp_get_wtime();
-    std::cout << end - start << '\n';
+    // double end = omp_get_wtime();
+    // std::cout << end - start << '\n';
 
     // for pre-computed FFT water
     // if (t < 200.0) {
@@ -274,7 +277,7 @@ void computeMatricesFromInputs() {
   verticalAngleReflect = 3.1415f - verticalAngle;
 
   // Direction : Spherical coordinates to Cartesian coordinates conversion
-  vec3 direction =
+  direction =
       vec3(sin(verticalAngle) * cos(horizontalAngle), cos(verticalAngle),
            sin(verticalAngle) * sin(horizontalAngle));
 

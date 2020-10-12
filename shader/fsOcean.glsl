@@ -55,9 +55,7 @@ void main() {
 
   // farther the ocean, flatter the appearance
   float dist2 = max(length(eyePoint - worldPos), 0.01);
-  dist2 = exp(-0.2 * dist2);
+  dist2 = exp(-0.1 * dist2);
 
   fragColor = mix(fragColor, refr, 1 - dist2);
-
-  // fragColor = vec4(dist2);
 }

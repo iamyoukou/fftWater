@@ -33,27 +33,6 @@ It will have features as following:
 
 -   and so on.
 
-# Tricks to reduce cost
-
-There are `three` things to calculate each frame.
-
-1.  Height (`Eq. 19`). (`1` dimension, `1` IFFT)
-
-2.  Normal (`Eq. 20`). (`2` dimension, `2` IFFT)
-
-3.  Horizontal displacement (`Eq. 29`). (`2` dimension, `2` IFFT)
-
-Normally, `5` IFFT are needed `per frame`,
-as each equation has different frequency term.
-However, given the number of sampling points `N` along each axis,
-their complex exponent terms are always the same, i.e.
-
-![Wk](./image/Wk.png)
-
-So it is better to calculate these exponents once before simulation,
-and write them into a lookup table.
-Then, access that table when performing IFFT in each frame.
-
 # A specially designed IFFT
 
 Using standard FFT codes (e.g. [Cooley–Tukey FFT](https://rosettacode.org/wiki/Fast_Fourier_transform#C.2B.2B)) results in incorrect geometry changes.
@@ -120,6 +99,14 @@ A GPU-based parallelization is needed.
 
 ## Periodic artifact
 
+According to [5], there are two ways to reduce the periodic (or tiling) artifact.
+
+I have tried the one that blends the result with some noise [6, 7] and it actually can reduce the periodic artifact a little bit.
+
+## Shading
+
+I would like to try the BRDF shading method proposed by [8] in the future.
+
 # Reference
 
 [1] Tessendorf, Jerry. "Simulating ocean water." Simulating nature: realistic and interactive techniques. SIGGRAPH 1.2 (2001): 5.
@@ -129,3 +116,11 @@ A GPU-based parallelization is needed.
 [3] An introduction to Realistic Ocean Rendering through FFT - Fabio Suriano - Codemotion Rome 2017 ([slide](https://www.slideshare.net/Codemotion/an-introduction-to-realistic-ocean-rendering-through-fft-fabio-suriano-codemotion-rome-2017), [video](https://www.youtube.com/watch?v=ClW3fo94KR4))
 
 [4] Claes, J. "Real-time water rendering-introducing the projected grid concept." Master's thesis (2004).
+
+[5] Gamper, Thomas. "Ocean Surface Generation and Rendering." (2018).
+
+[6] Rydahl, Björn. "A VFX ocean toolkit with real time preview." (2009).
+
+[7] Ocean Surface Simulation ([slide](http://www-evasion.imag.fr/~Fabrice.Neyret/images/fluids-nuages/waves/Jonathan/articlesCG/NV_OceanCS_Slides.pdf))
+
+[8] Bruneton, Eric, Fabrice Neyret, and Nicolas Holzschuch. "Real‐time realistic ocean lighting using seamless transitions from geometry to BRDF." Computer Graphics Forum. Vol. 29. No. 2. Oxford, UK: Blackwell Publishing Ltd, 2010.

@@ -155,6 +155,7 @@ void cOcean::initTexture() {
   setTexture(tboDispX, 13, "./image/xDisp.png", FIF_PNG);
   setTexture(tboDispZ, 14, "./image/zDisp.png", FIF_PNG);
   setTexture(tboFresnel, 15, "./image/fresnel.png", FIF_PNG);
+  setTexture(tboPerlin, 16, "./image/perlin.png", FIF_PNG);
 }
 
 void cOcean::initUniform() {
@@ -174,12 +175,14 @@ void cOcean::initUniform() {
   uniTexDispZ = myGetUniformLocation(shader, "texDispZ");
   uniTexSkybox = myGetUniformLocation(shader, "texSkybox");
   uniTexFresnel = myGetUniformLocation(shader, "texFresnel");
+  uniTexPerlin = myGetUniformLocation(shader, "texPerlin");
 
   glUniform1i(uniTexHeight, 11);
   glUniform1i(uniTexNormal, 12);
   glUniform1i(uniTexDispX, 13);
   glUniform1i(uniTexDispZ, 14);
   glUniform1i(uniTexFresnel, 15);
+  glUniform1i(uniTexPerlin, 16);
   glUniform1i(uniTexReflect, 3);
   glUniform1i(uniTexRefract, 2);
 
