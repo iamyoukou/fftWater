@@ -392,8 +392,8 @@ void cOcean::render(float t, mat4 M, mat4 V, mat4 P, vec3 eyePoint,
   }
 
   // write maps
-  writeHeightMap();
-  writeNormalMap();
+  writeHeightMap(frameN);
+  writeNormalMap(frameN);
 
   // update maps
   setTexture(tboHeight, 11, "./image/height.png", FIF_PNG);
@@ -442,7 +442,7 @@ vec3 cOcean::getVertex(int ix, int iz) {
   return vtx;
 }
 
-void cOcean::writeHeightMap() {
+void cOcean::writeHeightMap(int fNum) {
   int w, h;
   w = N;
   h = w;
@@ -511,9 +511,15 @@ void cOcean::writeHeightMap() {
   FreeImage_Save(FIF_PNG, bitmapY, "./image/height.png", 0);
   FreeImage_Save(FIF_PNG, bitmapX, "./image/xDisp.png", 0);
   FreeImage_Save(FIF_PNG, bitmapZ, "./image/zDisp.png", 0);
+
+  // for pre-computed FFT water
+  // string prefix = "./heights/";
+  // FreeImage_Save(FIF_PNG, bitmapY, getFileDir(prefix + "height", fNum), 0);
+  // FreeImage_Save(FIF_PNG, bitmapX, getFileDir(prefix + "xDisp", fNum), 0);
+  // FreeImage_Save(FIF_PNG, bitmapZ, getFileDir(prefix + "zDisp", fNum), 0);
 }
 
-void cOcean::writeNormalMap() {
+void cOcean::writeNormalMap(int fNum) {
   int w, h;
   w = N;
   h = w;
@@ -548,6 +554,19 @@ void cOcean::writeNormalMap() {
   }
 
   FreeImage_Save(FIF_PNG, bitmap, "./image/normal.png", 0);
+
+  // for pre-computed FFT water
+  // FreeImage_Save(FIF_PNG, bitmap, getFileDir("./normals/normal", fNum), 0);
+}
+
+const char *cOcean::getFileDir(string prefix, int fNum) {
+  // zero padding
+  // e.g. "output0001.bmp"
+  string num = to_string(fNum);
+  num = string(4 - num.length(), '0') + num;
+  string fileDir = prefix + num + ".png";
+
+  return fileDir.c_str();
 }
 
 void cOcean::initReflect() {

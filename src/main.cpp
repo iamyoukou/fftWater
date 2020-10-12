@@ -133,6 +133,12 @@ int main(int argc, char *argv[]) {
     double end = omp_get_wtime();
     std::cout << end - start << '\n';
 
+    // for pre-computed FFT water
+    // if (t < 200.0) {
+    //   ocean->render(t, model, view, projection, eyePoint, lightColor,
+    //                 tempLightPos, resume, frameNumber);
+    // }
+
     if (resume) {
       t += 0.01f;
     }

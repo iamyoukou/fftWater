@@ -80,8 +80,9 @@ public:
   void initReflect();
   void initRefract();
   void setTexture(GLuint &, int, const string, FREE_IMAGE_FORMAT);
-  void writeHeightMap();
-  void writeNormalMap();
+  void writeHeightMap(int);
+  void writeNormalMap(int);
+  const char *getFileDir(string, int);
 };
 
 #endif
