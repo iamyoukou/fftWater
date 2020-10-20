@@ -45,22 +45,19 @@ public:
   vector<GLuint> vaos;
 
   GLuint shader;
-  GLuint tboHeight, tboNormal, tboFresnel;
-  GLuint tboDispX, tboDispZ;
+  GLuint tboDisp, tboNormal, tboFresnel;
   GLuint tboPerlin;
   GLint uniM, uniV, uniP;
   GLint uniLightColor, uniLightPos;
-  GLint uniTexReflect, uniTexRefract, uniTexHeight, uniTexNormal, uniTexSkybox;
-  GLint uniTexDispX, uniTexDispZ;
-  GLint uniTexPerlin;
-  GLint uniTexFresnel;
+  GLint uniTexReflect, uniTexRefract, uniTexDisp, uniTexNormal, uniTexSkybox;
+  GLint uniTexPerlin, uniTexFresnel;
   GLint uniEyePoint;
   GLint uniDudvMove;
   GLuint tboRefract, tboReflect;
   GLuint fboRefract, fboReflect;
   GLuint rboDepthRefract, rboDepthReflect;
 
-  FIBITMAP *heightMap, *normalMap;
+  FIBITMAP *dispMap, *normalMap;
 
 protected:
 public:

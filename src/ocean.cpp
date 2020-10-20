@@ -150,12 +150,10 @@ void cOcean::initBuffers() {
 }
 
 void cOcean::initTexture() {
-  setTexture(tboHeight, 11, "./image/height.png", FIF_PNG);
+  setTexture(tboDisp, 11, "./image/disp.png", FIF_PNG);
   setTexture(tboNormal, 12, "./image/normal.png", FIF_PNG);
-  setTexture(tboDispX, 13, "./image/xDisp.png", FIF_PNG);
-  setTexture(tboDispZ, 14, "./image/zDisp.png", FIF_PNG);
-  setTexture(tboFresnel, 15, "./image/fresnel.png", FIF_PNG);
-  setTexture(tboPerlin, 16, "./image/perlin.png", FIF_PNG);
+  setTexture(tboFresnel, 13, "./image/fresnel.png", FIF_PNG);
+  setTexture(tboPerlin, 14, "./image/perlin.png", FIF_PNG);
 }
 
 void cOcean::initUniform() {
@@ -169,20 +167,16 @@ void cOcean::initUniform() {
   // texture
   uniTexReflect = myGetUniformLocation(shader, "texReflect");
   uniTexRefract = myGetUniformLocation(shader, "texRefract");
-  uniTexHeight = myGetUniformLocation(shader, "texHeight");
+  uniTexDisp = myGetUniformLocation(shader, "texDisp");
   uniTexNormal = myGetUniformLocation(shader, "texNormal");
-  uniTexDispX = myGetUniformLocation(shader, "texDispX");
-  uniTexDispZ = myGetUniformLocation(shader, "texDispZ");
   uniTexSkybox = myGetUniformLocation(shader, "texSkybox");
   uniTexFresnel = myGetUniformLocation(shader, "texFresnel");
   uniTexPerlin = myGetUniformLocation(shader, "texPerlin");
 
-  glUniform1i(uniTexHeight, 11);
+  glUniform1i(uniTexDisp, 11);
   glUniform1i(uniTexNormal, 12);
-  glUniform1i(uniTexDispX, 13);
-  glUniform1i(uniTexDispZ, 14);
-  glUniform1i(uniTexFresnel, 15);
-  glUniform1i(uniTexPerlin, 16);
+  glUniform1i(uniTexFresnel, 13);
+  glUniform1i(uniTexPerlin, 14);
   glUniform1i(uniTexReflect, 3);
   glUniform1i(uniTexRefract, 2);
 
@@ -216,7 +210,7 @@ void cOcean::setTexture(GLuint &tbo, int texUnit, const string texDir,
 }
 
 float cOcean::dispersion(int n_prime, int m_prime) {
-  float w_0 = 2.0f * M_PI / 200.0f;
+  float w_0 = 2.0f * M_PI / 50.0f;
   float kx = M_PI * (2 * n_prime - N) / length;
   float kz = M_PI * (2 * m_prime - N) / length;
   return floor(sqrt(g * sqrt(kx * kx + kz * kz)) / w_0) * w_0;
@@ -399,10 +393,10 @@ void cOcean::render(float t, mat4 M, mat4 V, mat4 P, vec3 eyePoint,
   writeNormalMap(frameN);
 
   // update maps
-  setTexture(tboHeight, 11, "./image/height.png", FIF_PNG);
+  setTexture(tboDisp, 11, "./image/disp.png", FIF_PNG);
   setTexture(tboNormal, 12, "./image/normal.png", FIF_PNG);
-  setTexture(tboDispX, 13, "./image/xDisp.png", FIF_PNG);
-  setTexture(tboDispZ, 14, "./image/zDisp.png", FIF_PNG);
+  // setTexture(tboDispX, 13, "./image/xDisp.png", FIF_PNG);
+  // setTexture(tboDispZ, 14, "./image/zDisp.png", FIF_PNG);
 
   // update transform matrix
   glUseProgram(shader);
@@ -450,25 +444,11 @@ void cOcean::writeHeightMap(int fNum) {
   w = N;
   h = w;
 
-  FIBITMAP *bitmapY = FreeImage_Allocate(w, h, 24);
+  FIBITMAP *dispMap = FreeImage_Allocate(w, h, 24);
   RGBQUAD colorY;
 
-  FIBITMAP *bitmapX = FreeImage_Allocate(w, h, 24);
-  RGBQUAD colorX;
-
-  FIBITMAP *bitmapZ = FreeImage_Allocate(w, h, 24);
-  RGBQUAD colorZ;
-
-  if (!bitmapY) {
-    std::cout << "FreeImage: Cannot allocate bitmapY." << '\n';
-    exit(EXIT_FAILURE);
-  }
-  if (!bitmapX) {
-    std::cout << "FreeImage: Cannot allocate bitmapX." << '\n';
-    exit(EXIT_FAILURE);
-  }
-  if (!bitmapZ) {
-    std::cout << "FreeImage: Cannot allocate bitmapZ." << '\n';
+  if (!dispMap) {
+    std::cout << "FreeImage: Cannot allocate dispMap." << '\n';
     exit(EXIT_FAILURE);
   }
 
@@ -476,50 +456,30 @@ void cOcean::writeHeightMap(int fNum) {
     for (int j = 0; j < h; j++) {
       int idx = i * N + j;
 
-      // height
-      float scaleY = 2.0;
+      // save height, xz-displacement into one image
+      // (R, G, B) <-- (value + offset) / scale * 255
+      // (R, G, B) is for (x-displacement, height, z-displacement)
       float y = vertices[idx].oy - vertices[idx].y;
-      int signY = (y < 0) ? 0 : 255;
-      int iy = int(abs(y) / scaleY * 255.0);
+      y = (y + 2.0) / 10.0 * 255.0;
 
-      colorY.rgbRed = iy;           // value
-      colorY.rgbGreen = signY;      // sign
-      colorY.rgbBlue = int(scaleY); // scale
-      FreeImage_SetPixelColor(bitmapY, i, j, &colorY);
-
-      // x-displacement
-      float scaleX = 2.0;
       float x = vertices[idx].ox - vertices[idx].x;
-      int signX = (x < 0) ? 0 : 255;
-      int ix = int(abs(x) / scaleX * 255.0);
+      x = (x + 2.0) / 10.0 * 255.0;
 
-      colorX.rgbRed = ix;           // value
-      colorX.rgbGreen = signX;      // sign
-      colorX.rgbBlue = int(scaleX); // scale
-      FreeImage_SetPixelColor(bitmapX, i, j, &colorX);
-
-      // z-displacement
-      float scaleZ = 2.0;
       float z = vertices[idx].oz - vertices[idx].z;
-      int signZ = (z < 0) ? 0 : 255;
-      int iz = int(abs(z) / scaleZ * 255.0);
+      z = (z + 2.0) / 10.0 * 255.0;
 
-      colorZ.rgbRed = iz;           // value
-      colorZ.rgbGreen = signZ;      // sign
-      colorZ.rgbBlue = int(scaleZ); // scale
-      FreeImage_SetPixelColor(bitmapZ, i, j, &colorZ);
+      colorY.rgbRed = int(x);   // value
+      colorY.rgbGreen = int(y); // sign
+      colorY.rgbBlue = int(z);  // scale
+      FreeImage_SetPixelColor(dispMap, i, j, &colorY);
     }
   }
 
-  FreeImage_Save(FIF_PNG, bitmapY, "./image/height.png", 0);
-  FreeImage_Save(FIF_PNG, bitmapX, "./image/xDisp.png", 0);
-  FreeImage_Save(FIF_PNG, bitmapZ, "./image/zDisp.png", 0);
+  FreeImage_Save(FIF_PNG, dispMap, "./image/disp.png", 0);
 
   // for pre-computed FFT water
-  // string prefix = "./heights/";
-  // FreeImage_Save(FIF_PNG, bitmapY, getFileDir(prefix + "height", fNum), 0);
-  // FreeImage_Save(FIF_PNG, bitmapX, getFileDir(prefix + "xDisp", fNum), 0);
-  // FreeImage_Save(FIF_PNG, bitmapZ, getFileDir(prefix + "zDisp", fNum), 0);
+  // string prefix = "./disp/";
+  // FreeImage_Save(FIF_PNG, dispMap, getFileDir(prefix + "disp", fNum), 0);
 }
 
 void cOcean::writeNormalMap(int fNum) {

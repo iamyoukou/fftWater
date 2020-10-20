@@ -14,9 +14,6 @@ void releaseResource();
 void computeMatricesFromInputs();
 void keyCallback(GLFWwindow *, int, int, int, int);
 
-void saveHeightMap();
-void saveNormalMap();
-
 GLFWwindow *window;
 Skybox *skybox;
 cOcean *ocean;
@@ -137,7 +134,7 @@ int main(int argc, char *argv[]) {
     // std::cout << end - start << '\n';
 
     // for pre-computed FFT water
-    // if (t < 200.0) {
+    // if (t < 50.0) {
     //   ocean->render(t, model, view, projection, eyePoint, lightColor,
     //                 tempLightPos, resume, frameNumber);
     // }
@@ -145,14 +142,6 @@ int main(int argc, char *argv[]) {
     if (resume) {
       t += 0.01f;
     }
-
-    // save height map
-    // if (saveMap) {
-    //   saveHeightMap();
-    //   saveNormalMap();
-    //
-    //   saveMap = false;
-    // }
 
     /* render to main screen */
     // glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -430,119 +419,4 @@ void releaseResource() {
 
   glfwTerminate();
   FreeImage_DeInitialise();
-}
-
-void saveHeightMap() {
-  int w, h;
-  w = N;
-  h = w;
-
-  FIBITMAP *bitmapY = FreeImage_Allocate(w, h, 24);
-  RGBQUAD colorY;
-
-  FIBITMAP *bitmapX = FreeImage_Allocate(w, h, 24);
-  RGBQUAD colorX;
-
-  FIBITMAP *bitmapZ = FreeImage_Allocate(w, h, 24);
-  RGBQUAD colorZ;
-
-  if (!bitmapY) {
-    std::cout << "FreeImage: Cannot allocate bitmapY." << '\n';
-    exit(EXIT_FAILURE);
-  }
-  if (!bitmapX) {
-    std::cout << "FreeImage: Cannot allocate bitmapX." << '\n';
-    exit(EXIT_FAILURE);
-  }
-  if (!bitmapZ) {
-    std::cout << "FreeImage: Cannot allocate bitmapZ." << '\n';
-    exit(EXIT_FAILURE);
-  }
-
-  for (int i = 0; i < w; i++) {
-    for (int j = 0; j < h; j++) {
-      int idx = i * N + j;
-
-      // height
-      float scaleY = 2.0;
-      float y = ocean->vertices[idx].oy - ocean->vertices[idx].y;
-      int signY = (y < 0) ? 0 : 255;
-      int iy = int(abs(y) / scaleY * 255.0);
-
-      colorY.rgbRed = iy;           // value
-      colorY.rgbGreen = signY;      // sign
-      colorY.rgbBlue = int(scaleY); // scale
-      FreeImage_SetPixelColor(bitmapY, i, j, &colorY);
-
-      // x-displacement
-      float scaleX = 2.0;
-      float x = ocean->vertices[idx].ox - ocean->vertices[idx].x;
-      int signX = (x < 0) ? 0 : 255;
-      int ix = int(abs(x) / scaleX * 255.0);
-
-      colorX.rgbRed = ix;           // value
-      colorX.rgbGreen = signX;      // sign
-      colorX.rgbBlue = int(scaleX); // scale
-      FreeImage_SetPixelColor(bitmapX, i, j, &colorX);
-
-      // z-displacement
-      float scaleZ = 2.0;
-      float z = ocean->vertices[idx].oz - ocean->vertices[idx].z;
-      int signZ = (z < 0) ? 0 : 255;
-      int iz = int(abs(z) / scaleZ * 255.0);
-
-      colorZ.rgbRed = iz;           // value
-      colorZ.rgbGreen = signZ;      // sign
-      colorZ.rgbBlue = int(scaleZ); // scale
-      FreeImage_SetPixelColor(bitmapZ, i, j, &colorZ);
-    }
-  }
-
-  if (FreeImage_Save(FIF_PNG, bitmapY, "./image/height.png", 0))
-    cout << "Height map successfully saved!" << endl;
-  if (FreeImage_Save(FIF_PNG, bitmapX, "./image/xDisp.png", 0))
-    cout << "X-displacement map successfully saved!" << endl;
-  if (FreeImage_Save(FIF_PNG, bitmapZ, "./image/zDisp.png", 0))
-    cout << "Z-displacement map successfully saved!" << endl;
-}
-
-void saveNormalMap() {
-  int w, h;
-  w = N;
-  h = w;
-
-  FIBITMAP *bitmap = FreeImage_Allocate(w, h, 24);
-  RGBQUAD color;
-
-  if (!bitmap) {
-    std::cout << "FreeImage: Cannot allocate image." << '\n';
-    exit(EXIT_FAILURE);
-  }
-
-  for (int i = 0; i < w; i++) {
-    for (int j = 0; j < h; j++) {
-      int idx = i * N + j;
-
-      vec3 normal(ocean->vertices[idx].nx, ocean->vertices[idx].ny,
-                  ocean->vertices[idx].nz);
-      normal = normalize(normal);      // to [-1, 1]
-      normal = (normal + 1.0f) / 2.0f; // to [0, 1]
-
-      // to [0, 255]
-      int ix = int(normal.x * 255.0);
-      int iy = int(normal.y * 255.0);
-      int iz = int(normal.z * 255.0);
-
-      color.rgbRed = ix;
-      color.rgbGreen = iy;
-      color.rgbBlue = iz;
-
-      // std::cout << ix << ", " << iy << ", " << iz << '\n';
-
-      FreeImage_SetPixelColor(bitmap, i, j, &color);
-    }
-  }
-
-  if (FreeImage_Save(FIF_PNG, bitmap, "./image/normal.png", 0))
-    cout << "Normal map successfully saved!" << endl;
 }
