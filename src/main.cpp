@@ -18,6 +18,7 @@ GLFWwindow *window;
 Skybox *skybox;
 cOcean *ocean;
 ScreenQuad *screenQuad;
+Mesh *mesh;
 
 bool saveTrigger = true;
 int frameNumber = 0;
@@ -67,6 +68,8 @@ int main(int argc, char *argv[]) {
   // ocean simulator
   ocean = new cOcean(N, 0.005f, vec2(16.0f, 0.0f), 16);
 
+  mesh = new Mesh("./mesh/monkey.obj", true);
+
   // a rough way to solve cursor position initialization problem
   // must call glfwPollEvents once to activate glfwSetCursorPos
   // this is a glfw mechanism problem
@@ -80,6 +83,11 @@ int main(int argc, char *argv[]) {
     // view control
     computeMatricesFromInputs();
 
+    mat4 meshM = translate(mat4(1.f), vec3(-29.f, -0.75f, 0.f));
+    meshM = rotate(meshM, -3.14f / 4.f, vec3(1.f, 0.f, 0.f));
+    meshM = rotate(meshM, -3.14f / 4.f, vec3(0.f, 1.f, 0.f));
+    meshM = scale(meshM, vec3(2.f, 2.f, 2.f));
+
     /* render to refraction texture */
     // for user-defined framebuffer,
     // must clear the depth buffer before rendering to enable depth test
@@ -91,6 +99,10 @@ int main(int argc, char *argv[]) {
     glDisable(GL_CLIP_DISTANCE1);
 
     vec4 clipPlane0 = vec4(0, -1, 0, cOcean::BASELINE);
+    glUseProgram(mesh->shader);
+    glUniform4fv(mesh->uniClipPlane0, 1, value_ptr(clipPlane0));
+
+    mesh->draw(meshM, view, projection, eyePoint, lightColor, lightPos, 0, 0);
 
     // skybox
     // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -121,6 +133,8 @@ int main(int argc, char *argv[]) {
 
     // sky
     skybox->draw(model, view, projection, eyePoint);
+
+    mesh->draw(meshM, view, projection, eyePoint, lightColor, lightPos, 0, 0);
 
     // ocean
     glDisable(GL_CULL_FACE);

@@ -49,7 +49,7 @@ For example, in the demo, a 4-vertex quad is subdivided into a `64x64` grid base
 
 The shading code is based on [4].
 
-![withLOD](./withLOD.gif)
+![withLOD](./withLOD.gif) ![withLOD3](./withLOD3.gif)
 
 ## Periodic artifacts
 
