@@ -40,17 +40,18 @@ public:
   const aiScene *scene;
 
   static const float BASELINE;
+  static vec2 dudvMove;
 
   vector<GLuint> vboVtxs, vboUvs, vboNmls;
   vector<GLuint> vaos;
 
   GLuint shader;
   GLuint tboDisp, tboNormal, tboFresnel;
-  GLuint tboPerlin;
+  GLuint tboPerlin, tboPerlinN, tboPerlinDudv;
   GLint uniM, uniV, uniP;
   GLint uniLightColor, uniLightPos;
   GLint uniTexReflect, uniTexRefract, uniTexDisp, uniTexNormal, uniTexSkybox;
-  GLint uniTexPerlin, uniTexFresnel;
+  GLint uniTexPerlin, uniTexPerlinN, uniTexPerlinDudv, uniTexFresnel;
   GLint uniEyePoint;
   GLint uniDudvMove;
   GLuint tboRefract, tboReflect;

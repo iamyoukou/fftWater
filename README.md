@@ -33,22 +33,6 @@ It will have features as following:
 
 -   and so on.
 
-# A specially designed IFFT
-
-Using standard FFT codes (e.g. [Cooley–Tukey FFT](https://rosettacode.org/wiki/Fast_Fourier_transform#C.2B.2B)) results in incorrect geometry changes.
-Generally, standard FFT assumes that the sampling position is non-negative.
-However, the wave vectors used in [1] have negative components.
-This constraint guarantees the variety of wave directions.
-For example, if a wave vector only has non-negative components,
-its direction will always reside in `[+x, +z]` and `[-x, -z]` orthants, and hence,
-waves with directions within `[-x, +z]` and `[+x, -z]` orthants are lost.
-
-Furthermore, a standard FFT assumes that the range of summation is also non-negative.
-Based on this constraint, it designs the complex exponent set and iterations.
-However, the range used in [1] is `[-N/2, N/2)`, with `N` representing the number of sampling points.
-It means that a different set of complex exponents should be used.
-Therefore, a special IFFT must be designed for [1].
-
 # Result
 
 I have modified [Keith Lantz's code](https://github.com/klantz81/ocean-simulation/tree/master/src) and it can be run on `OSX` now.
@@ -66,6 +50,15 @@ For example, in the demo, a 4-vertex quad is subdivided into a `64x64` grid base
 The shading code is based on [4].
 
 ![withLOD](./withLOD.gif)
+
+## Periodic artifacts
+
+Generally, the wide ocean area is created by tiling an FFT water quad.
+As a result, when the field of view is large enough,
+periodic artifacts can be observed at the far place.
+
+According to [5], there are two ways to reduce periodic (or tiling) artifacts.
+I have tried the one that blends the result with some noise [6, 7] and it works well.
 
 ![withLOD2](./withLOD2.gif)
 
@@ -97,15 +90,25 @@ But this is not enough for realtime purpose.
 
 A GPU-based parallelization is needed.
 
-## Periodic artifact
-
-According to [5], there are two ways to reduce the periodic (or tiling) artifact.
-
-I have tried the one that blends the result with some noise [6, 7] and it actually can reduce the periodic artifact a little bit.
-
 ## Shading
 
 I would like to try the BRDF shading method proposed by [8] in the future.
+
+# Note
+
+Using standard FFT codes (e.g. [Cooley–Tukey FFT](https://rosettacode.org/wiki/Fast_Fourier_transform#C.2B.2B)) results in incorrect geometry changes.
+Generally, standard FFT assumes that the sampling position is non-negative.
+However, the wave vectors used in [1] have negative components.
+This constraint guarantees the variety of wave directions.
+For example, if a wave vector only has non-negative components,
+its direction will always reside in `[+x, +z]` and `[-x, -z]` orthants, and hence,
+waves with directions within `[-x, +z]` and `[+x, -z]` orthants are lost.
+
+Furthermore, a standard FFT assumes that the range of summation is also non-negative.
+Based on this constraint, it designs the complex exponent set and iterations.
+However, the range used in [1] is `[-N/2, N/2)`, with `N` representing the number of sampling points.
+It means that a different set of complex exponents should be used.
+Therefore, a special IFFT must be designed for [1].
 
 # Reference
 

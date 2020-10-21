@@ -159,6 +159,8 @@ int main(int argc, char *argv[]) {
     /* Poll for and process events */
     glfwPollEvents();
 
+    cOcean::dudvMove += vec2(0.001, 0.001);
+
     // save frame
     if (saveTrigger) {
       string dir = "./result/output";

@@ -2,6 +2,7 @@
 #include "common.h"
 
 const float cOcean::BASELINE = 0.f;
+vec2 cOcean::dudvMove = vec2(0.f, 0.f);
 
 cOcean::cOcean(const int N, const float A, const vec2 w, const float length)
     : g(9.81), N(N), Nplus1(N + 1), A(A), w(w), length(length), vertices(0),
@@ -154,6 +155,8 @@ void cOcean::initTexture() {
   setTexture(tboNormal, 12, "./image/normal.png", FIF_PNG);
   setTexture(tboFresnel, 13, "./image/fresnel.png", FIF_PNG);
   setTexture(tboPerlin, 14, "./image/perlin.png", FIF_PNG);
+  setTexture(tboPerlinN, 15, "./image/perlinNormal.png", FIF_PNG);
+  setTexture(tboPerlinDudv, 16, "./image/perlinDudv.png", FIF_PNG);
 }
 
 void cOcean::initUniform() {
@@ -172,11 +175,15 @@ void cOcean::initUniform() {
   uniTexSkybox = myGetUniformLocation(shader, "texSkybox");
   uniTexFresnel = myGetUniformLocation(shader, "texFresnel");
   uniTexPerlin = myGetUniformLocation(shader, "texPerlin");
+  uniTexPerlinN = myGetUniformLocation(shader, "texPerlinN");
+  uniTexPerlinDudv = myGetUniformLocation(shader, "texPerlinDudv");
 
   glUniform1i(uniTexDisp, 11);
   glUniform1i(uniTexNormal, 12);
   glUniform1i(uniTexFresnel, 13);
   glUniform1i(uniTexPerlin, 14);
+  glUniform1i(uniTexPerlinN, 15);
+  glUniform1i(uniTexPerlinDudv, 16);
   glUniform1i(uniTexReflect, 3);
   glUniform1i(uniTexRefract, 2);
 
@@ -185,6 +192,7 @@ void cOcean::initUniform() {
   uniLightPos = myGetUniformLocation(shader, "lightPos");
 
   // other
+  uniDudvMove = myGetUniformLocation(shader, "dudvMove");
   uniEyePoint = myGetUniformLocation(shader, "eyePoint");
 }
 
@@ -395,8 +403,6 @@ void cOcean::render(float t, mat4 M, mat4 V, mat4 P, vec3 eyePoint,
   // update maps
   setTexture(tboDisp, 11, "./image/disp.png", FIF_PNG);
   setTexture(tboNormal, 12, "./image/normal.png", FIF_PNG);
-  // setTexture(tboDispX, 13, "./image/xDisp.png", FIF_PNG);
-  // setTexture(tboDispZ, 14, "./image/zDisp.png", FIF_PNG);
 
   // update transform matrix
   glUseProgram(shader);
@@ -408,6 +414,8 @@ void cOcean::render(float t, mat4 M, mat4 V, mat4 P, vec3 eyePoint,
   glUniform3fv(uniEyePoint, 1, value_ptr(eyePoint));
   glUniform3fv(uniLightColor, 1, value_ptr(lightColor));
   glUniform3fv(uniLightPos, 1, value_ptr(lightPos));
+
+  glUniform2fv(uniDudvMove, 1, value_ptr(dudvMove));
 
   // duplicated
   for (int j = 0; j < 1; j++) {

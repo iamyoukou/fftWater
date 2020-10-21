@@ -50,24 +50,22 @@ void main() {
   vec3 scale = vec3(0.75, 0.5, 0.5);
 
   // perlin noise
-  float perlinZ = texture(texPerlin, uv.xy / 16.0).r * 2.0 - 1.0;
-  float perlinX = texture(texPerlin, uv.yx / 16.0).r * 2.0 - 1.0;
+  // blend this noise with height field can slightly reduce periodic artifacts
+  float perlinY = texture(texPerlin, (uv.xy + dudvMove) / 16.0).r * 2.0 - 1.0;
 
   vec3 disp = texture(texDisp, uv).rgb;
   disp = disp * 10.0 - 2.0;
   disp *= distAtten;
   disp *= scale;
 
-  float noiseY = (perlinX + perlinZ) * 0.5 * 10.0 * distAtten;
+  float noiseY = perlinY * 5.0 * distAtten;
   worldPos.y += mix(disp.y, noiseY, 0.35);
 
   // x-displacement
-  float noiseX = perlinX * 5.0 * distAtten;
-  worldPos.x += mix(disp.x, noiseX, 0.35);
+  worldPos.x += disp.x;
 
   // z-displacement
-  float noiseZ = perlinZ * 5.0 * distAtten;
-  worldPos.z += mix(disp.z, noiseZ, 0.35);
+  worldPos.z += disp.z;
 
   gl_Position = P * V * vec4(worldPos, 1.0);
 
