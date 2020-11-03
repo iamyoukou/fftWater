@@ -82,6 +82,8 @@ public:
   void setTexture(GLuint &, int, const string, FREE_IMAGE_FORMAT);
   void writeHeightMap(int);
   void writeNormalMap(int);
+  void writeFoldingMap(int);
+  float Heaviside(float);
   const char *getFileDir(string, int);
 };
 

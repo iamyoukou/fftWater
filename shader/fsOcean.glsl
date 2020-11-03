@@ -19,6 +19,10 @@ out vec4 fragColor;
 
 const float alpha = 0.02;
 
+float fresnelSchlick(float cosTheta, float F0) {
+  return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
 void main() {
   vec2 ndc = vec2(clipSpace.x / clipSpace.w, clipSpace.y / clipSpace.w);
   ndc = ndc / 2.0 + 0.5;
@@ -70,9 +74,10 @@ void main() {
   vec3 R = reflect(-L, N);
 
   // two kinds of fresnel effect
-  vec2 fresUv = vec2(1.0 - max(dot(N, V), 0), 0.0);
+  // vec2 fresUv = vec2(1.0 - max(dot(N, V), 0), 0.0);
   // vec2 fresUv = vec2(max(dot(N, R), 0), 0.0);
-  float fresnel = texture(texFresnel, fresUv).r;
+  // float fresnel = texture(texFresnel, fresUv).r;
+  float fresnel = fresnelSchlick(max(dot(H, V), 0.0), 0.02);
 
   vec4 sunColor = vec4(1.0, 1.0, 1.0, 1.0);
   float sunFactor = 20.0;

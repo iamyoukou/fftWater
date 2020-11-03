@@ -399,6 +399,7 @@ void cOcean::render(float t, mat4 M, mat4 V, mat4 P, vec3 eyePoint,
   // write maps
   writeHeightMap(frameN);
   writeNormalMap(frameN);
+  writeFoldingMap(frameN);
 
   // update maps
   setTexture(tboDisp, 11, "./image/disp.png", FIF_PNG);
@@ -529,6 +530,76 @@ void cOcean::writeNormalMap(int fNum) {
   // for pre-computed FFT water
   // FreeImage_Save(FIF_PNG, bitmap, getFileDir("./normals/normal", fNum), 0);
 }
+
+void cOcean::writeFoldingMap(int fNum) {
+  int w, h;
+  w = N;
+  h = w;
+
+  FIBITMAP *bitmap = FreeImage_Allocate(w, h, 24);
+  RGBQUAD color;
+
+  if (!bitmap) {
+    std::cout << "FreeImage: Cannot allocate image." << '\n';
+    exit(EXIT_FAILURE);
+  }
+
+  for (int i = 0; i < w; i++) {
+    for (int j = 0; j < h; j++) {
+      // index for center finite difference
+      int iLeft = (i - 1 < 0) ? w - 1 : i - 1;
+      int iRight = (i + 1) % w;
+      int jUp = (j - 1 < 0) ? h - 1 : j - 1;
+      int jDown = (j + 1) % h;
+
+      int idxLeft = iLeft * N + j;
+      int idxRight = iRight * N + j;
+      int idxUp = i * N + jUp;
+      int idxDown = i * N + jDown;
+
+      // x, z displacement
+      // lambda has already been multiplied in evaluateWavesFFT()
+      float Dx_xplus1 = vertices[idxRight].ox - vertices[idxRight].x;
+      float Dx_xminus1 = vertices[idxLeft].ox - vertices[idxLeft].x;
+
+      float Dz_zplus1 = vertices[idxUp].oz - vertices[idxUp].z;
+      float Dz_zminus1 = vertices[idxDown].oz - vertices[idxDown].z;
+
+      // Jacobian (or folding map)
+      float Jxx = 1.f + (Dx_xplus1 - Dx_xminus1) * 0.5f;
+      float Jzz = 1.f + (Dz_zplus1 - Dz_zminus1) * 0.5f;
+      float Jzx = (Dz_zplus1 - Dz_zminus1) * 0.5f;
+      float Jxz = Jzx;
+
+      float Jacob = Jxx * Jzz - Jxz * Jzx;
+
+      // Dupuy, Jonathan, and Eric Bruneton. "Real-time animation and rendering
+      // of ocean whitecaps." SIGGRAPH Asia 2012 Technical Briefs. 2012. 1-3.
+      float epsilon = 0.9f;
+      Jacob = glm::max(Jacob - epsilon, 0.f);
+
+      // std::cout << Jacob << '\n';
+
+      // convert to RGB
+      Jacob = (Jacob * 1.f) * 255.f;
+      Jacob = glm::min(Jacob, 255.f);
+      // std::cout << Jacob << '\n';
+
+      color.rgbRed = int(Jacob);
+      color.rgbGreen = int(Jacob);
+      color.rgbBlue = int(Jacob);
+
+      FreeImage_SetPixelColor(bitmap, i, j, &color);
+    }
+  }
+
+  FreeImage_Save(FIF_PNG, bitmap, "./image/fold.png", 0);
+
+  // for pre-computed FFT water
+  // FreeImage_Save(FIF_PNG, bitmap, getFileDir("./folds/fold", fNum), 0);
+}
+
+float cOcean::Heaviside(float x) { return (x < 0.f) ? 0.f : 1.f; }
 
 const char *cOcean::getFileDir(string prefix, int fNum) {
   // zero padding

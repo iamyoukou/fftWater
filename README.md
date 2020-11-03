@@ -92,7 +92,10 @@ A GPU-based parallelization is needed.
 
 ## Shading
 
-I would like to try the BRDF shading method proposed by [8] in the future.
+To bring more reality into the shading part, [2, 8, 9] consider the sub-surface scattering (SSS) of water.
+[2] blends a deep water color with a sub-surface water color to create a fake SSS effect.
+[8] designs a BRDF for the sun light, and modifies the sea color with the sky light.
+[9] applies BRDFs to both the sun light and sky light, and proposes an scattering equation to fake the SSS effect of water.
 
 # Note
 
@@ -127,3 +130,5 @@ Therefore, a special IFFT must be designed for [1].
 [7] Ocean Surface Simulation ([slide](http://www-evasion.imag.fr/~Fabrice.Neyret/images/fluids-nuages/waves/Jonathan/articlesCG/NV_OceanCS_Slides.pdf))
 
 [8] Bruneton, Eric, Fabrice Neyret, and Nicolas Holzschuch. "Real‐time realistic ocean lighting using seamless transitions from geometry to BRDF." Computer Graphics Forum. Vol. 29. No. 2. Oxford, UK: Blackwell Publishing Ltd, 2010.
+
+[9] Advanced Graphics Techniques Tutorial: Wakes, Explosions and Lighting: Interactive Water Simulation in 'Atlas', GDC 2019 ([slide](https://gpuopen.com/gdc-presentations/2019/gdc-2019-agtd6-interactive-water-simulation-in-atlas.pdf))

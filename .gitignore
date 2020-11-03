@@ -13,4 +13,8 @@ image/normal.png
 image/xDisp.png
 image/zDisp.png
 image/disp.png
+image/fold.png
 *.bmp
+normals/
+folds/
+disps/
