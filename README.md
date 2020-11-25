@@ -19,6 +19,8 @@ Technically, the method uses Inverse FFT, as it creates wave heights from freque
 But essentially, IFFT is same as FFT.
 Their differences are just the coefficient and the conjugate exponent.
 
+![withLOD](./withLOD.gif) ![withLOD3](./withLOD3.gif)
+
 # About this project
 
 [Keith Lantz](https://www.keithlantz.net/2011/10/ocean-simulation-part-one-using-the-discrete-fourier-transform/) has provided a nice implementation of [1], and I use it as a start point.
@@ -48,8 +50,6 @@ Second, sampling those maps both in tessellation shader and fragment shader.
 For example, in the demo, a 4-vertex quad is subdivided into a `64x64` grid based on the distance between `eyePoint` and a vertex.
 
 The shading code is based on [4].
-
-![withLOD](./withLOD.gif) ![withLOD3](./withLOD3.gif)
 
 ## Periodic artifacts
 
